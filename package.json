@@ -1,0 +1,30 @@
+{
+  "name": "shader-media",
+  "version": "1.0.0",
+  "description": "A web component for applying WebGL shader effects to images and videos",
+  "main": "media-shader.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "webgl",
+    "shader",
+    "webcomponent",
+    "video",
+    "image",
+    "effects",
+    "filter",
+    "custom-element"
+  ],
+  "author": "Rogie King",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rogie/shader-media.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rogie/shader-media/issues"
+  },
+  "homepage": "https://github.com/rogie/shader-media#readme"
+}
