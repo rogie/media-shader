@@ -78,17 +78,13 @@ class MediaShader extends HTMLElement {
             varying vec2 vTexCoord;
 
             void main() {
-                // Create UV coordinates normalized to resolution aspect ratio
-                vec2 uv = vTexCoord;
-                uv.x *= uResolution.x/uResolution.y;
-                
-                // Create a moving gradient based on UV coordinates and time
-                vec3 color = 0.5 + 0.5 * cos(uTime + uv.xyx + vec3(0,2,4));
-                
-                // If we have a texture, use it, otherwise use the gradient
                 if (uHasTexture) {
                     gl_FragColor = texture2D(uTexture, vTexCoord);
                 } else {
+                    // For non-textured cases, show the animated gradient
+                    vec2 uv = vTexCoord;
+                    uv.x *= uResolution.x/uResolution.y;
+                    vec3 color = 0.5 + 0.5 * cos(uTime + uv.xyx + vec3(0,2,4));
                     gl_FragColor = vec4(color, 1.0);
                 }
             }
@@ -199,16 +195,15 @@ class MediaShader extends HTMLElement {
    * @returns {boolean} True if the video should be playing
    */
   get playing() {
-    return (
-      this.hasAttribute("playing") && this.getAttribute("playing") !== "false"
-    );
+    return this.getAttribute("playing") !== "false";
   }
 
   set playing(value) {
-    if (value) {
+    const shouldPlay = value !== false && value !== "false";
+    if (shouldPlay) {
       this.setAttribute("playing", "");
     } else {
-      this.removeAttribute("playing");
+      this.setAttribute("playing", "false");
     }
   }
 
@@ -482,14 +477,20 @@ class MediaShader extends HTMLElement {
         this.updateAccessibility(newValue);
         break;
       case "playing":
-        this._playing = newValue !== null && newValue !== "false";
-        if (this.mediaElement && this.mediaElement.tagName === "VIDEO") {
-          if (this._playing) {
-            this.mediaElement
-              .play()
-              .catch((e) => console.warn("Auto-play failed:", e));
-          } else {
-            this.mediaElement.pause();
+        if (this.mediaElement?.tagName === "VIDEO") {
+          const shouldPlay = newValue !== "false";
+          try {
+            if (shouldPlay) {
+              await this.mediaElement.play();
+              this._playing = true;
+            } else {
+              this.mediaElement.pause();
+              this._playing = false;
+            }
+          } catch (e) {
+            console.warn("Video playback control failed:", e);
+            this._playing = false;
+            this.setAttribute("playing", "false");
           }
         }
         break;
@@ -506,6 +507,12 @@ class MediaShader extends HTMLElement {
    * Maintains aspect ratio when only width or height is specified.
    */
   updateCanvasSize() {
+    // Early return if canvas doesn't exist
+    if (!this.canvas) {
+      console.warn("Cannot update canvas size: canvas element does not exist");
+      return;
+    }
+
     let cssWidth = this._width;
     let cssHeight = this._height;
 
@@ -606,116 +613,147 @@ class MediaShader extends HTMLElement {
       return;
     }
 
-    // Don't try to load media if WebGL isn't supported
     if (!this.gl) return;
 
-    // If we already have a media element with the same source, just reattach it
-    if (this.mediaElement && this.mediaElement.src === src) {
-      this.shadowRoot.appendChild(this.mediaElement);
-      this._hasTexture = true;
+    const isVideo = /\.(mp4|webm|ogg)$/i.test(src);
 
-      // For videos, reset playback state
-      if (this.mediaElement.tagName === "VIDEO") {
-        if (this._playing) {
-          this.mediaElement
-            .play()
-            .catch((e) => console.warn("Auto-play failed:", e));
-        } else {
-          this.mediaElement.pause();
-        }
-      }
-
-      // Update canvas size and start render loop
-      this.updateCanvasSize();
-      this.createTexture();
-      this.startRenderLoop();
-      return;
-    }
-
-    // Clean up previous media element and stop render loop
+    // Clean up previous media element
     if (this.mediaElement) {
-      if (this.animationFrame) {
-        cancelAnimationFrame(this.animationFrame);
-        this.animationFrame = null;
+      if (this.mediaElement.tagName === "VIDEO") {
+        this.mediaElement.pause();
+        this.mediaElement.removeEventListener("play", this._onPlay);
+        this.mediaElement.removeEventListener("pause", this._onPause);
+        this.mediaElement.removeEventListener("timeupdate", this._onTimeUpdate);
+        if ("requestVideoFrameCallback" in this.mediaElement) {
+          this.mediaElement.cancelVideoFrameCallback(this._videoFrameCallback);
+        }
       }
       this.mediaElement.remove();
       this._hasTexture = false;
     }
 
-    // Determine media type from src
-    const isVideo = /\.(mp4|webm|ogg)$/i.test(src);
-
-    // Create appropriate media element
+    // Create new media element
     this.mediaElement = document.createElement(isVideo ? "video" : "img");
-
-    // Add CORS attributes and video-specific attributes
     this.mediaElement.crossOrigin = "anonymous";
-    this.mediaElement.setAttribute("aria-hidden", "true");
-
-    // Set alt text from attribute if it exists
-    const altText = this.getAttribute("alt");
-    this.mediaElement.alt = altText || "";
-
-    if (isVideo) {
-      this.mediaElement.muted = true;
-      this.mediaElement.playsInline = true;
-      this.mediaElement.loop = true;
-      // Set initial play state based on playing attribute
-      this._playing = this.getAttribute("playing") !== "false";
-    }
-
-    // Update canvas accessibility
-    this.updateAccessibility(altText);
-
     this.mediaElement.style.display = "none";
     this.shadowRoot.appendChild(this.mediaElement);
 
-    // Set up media loading
+    if (isVideo) {
+      // Set up video element
+      this.mediaElement.muted = true;
+      this.mediaElement.playsInline = true;
+      this.mediaElement.loop = true;
+      this.mediaElement.autoplay = false;
+
+      // Set up video texture update using requestVideoFrameCallback if available
+      if ("requestVideoFrameCallback" in this.mediaElement) {
+        const updateVideoTexture = () => {
+          if (this.texture && this.mediaElement.readyState >= 2) {
+            this.gl.activeTexture(this.gl.TEXTURE0);
+            this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+            this.gl.texImage2D(
+              this.gl.TEXTURE_2D,
+              0,
+              this.gl.RGBA,
+              this.gl.RGBA,
+              this.gl.UNSIGNED_BYTE,
+              this.mediaElement
+            );
+          }
+          if (this._playing && this.isConnected) {
+            this._videoFrameCallback =
+              this.mediaElement.requestVideoFrameCallback(updateVideoTexture);
+          }
+        };
+        this._videoFrameCallback =
+          this.mediaElement.requestVideoFrameCallback(updateVideoTexture);
+      } else {
+        // Fallback to requestAnimationFrame for browsers that don't support requestVideoFrameCallback
+        const updateVideoTexture = () => {
+          if (this.texture && this.mediaElement.readyState >= 2) {
+            this.gl.activeTexture(this.gl.TEXTURE0);
+            this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+            this.gl.texImage2D(
+              this.gl.TEXTURE_2D,
+              0,
+              this.gl.RGBA,
+              this.gl.RGBA,
+              this.gl.UNSIGNED_BYTE,
+              this.mediaElement
+            );
+          }
+          if (this._playing && this.isConnected) {
+            this._videoFrameCallback =
+              requestAnimationFrame(updateVideoTexture);
+          }
+        };
+        this._videoFrameCallback = requestAnimationFrame(updateVideoTexture);
+      }
+
+      // Add event listeners for play/pause
+      this.mediaElement.addEventListener("play", () => {
+        this._playing = true;
+        // Restart frame updates
+        if ("requestVideoFrameCallback" in this.mediaElement) {
+          this._videoFrameCallback =
+            this.mediaElement.requestVideoFrameCallback(updateVideoTexture);
+        } else {
+          this._videoFrameCallback = requestAnimationFrame(updateVideoTexture);
+        }
+      });
+
+      this.mediaElement.addEventListener("pause", () => {
+        this._playing = false;
+        // Cancel frame updates
+        if ("requestVideoFrameCallback" in this.mediaElement) {
+          this.mediaElement.cancelVideoFrameCallback(this._videoFrameCallback);
+        } else {
+          cancelAnimationFrame(this._videoFrameCallback);
+        }
+      });
+    }
+
     try {
       await new Promise((resolve, reject) => {
-        const loadHandler = () => {
-          // Check if mediaElement still exists
-          if (!this.mediaElement) {
-            console.warn("Media element was removed before load completed");
-            return;
+        const onLoad = async () => {
+          if (!this.isConnected || !this.mediaElement || !this.canvas) {
+            return reject(new Error("Component disconnected during load"));
           }
 
-          // Update canvas size based on media and attributes
           this.updateCanvasSize();
-
-          // Create and bind texture
           this.createTexture();
 
-          // Start render loop
-          this.startRenderLoop();
+          if (isVideo) {
+            // Initialize video playback
+            const shouldPlay = this.getAttribute("playing") !== "false";
+            this._playing = shouldPlay;
 
-          // Start playing if it's a video and playing is true
-          if (isVideo && this._playing && this.mediaElement) {
-            this.mediaElement
-              .play()
-              .catch((e) => console.warn("Auto-play failed:", e));
+            if (shouldPlay) {
+              try {
+                await this.mediaElement.play();
+              } catch (e) {
+                console.warn("Initial video play failed:", e);
+                this._playing = false;
+                this.setAttribute("playing", "false");
+              }
+            }
           }
 
+          this.startRenderLoop();
           resolve();
         };
 
-        this.mediaElement.onload = loadHandler;
-        this.mediaElement.onloadedmetadata = loadHandler;
-        this.mediaElement.onerror = (e) => {
-          console.error("Media loading error:", e);
-          reject(e);
-        };
-
-        // Set source after setting up event handlers
+        this.mediaElement.onloadeddata = onLoad;
+        this.mediaElement.onerror = reject;
         this.mediaElement.src = src;
       });
     } catch (error) {
       console.error("Error loading media:", error);
-      // Clean up on error
       if (this.mediaElement) {
         this.mediaElement.remove();
         this.mediaElement = null;
       }
+      this._hasTexture = false;
     }
   }
 
@@ -730,6 +768,7 @@ class MediaShader extends HTMLElement {
     }
 
     this.texture = this.gl.createTexture();
+    this.gl.activeTexture(this.gl.TEXTURE0);
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
 
     // Set texture parameters
@@ -753,6 +792,35 @@ class MediaShader extends HTMLElement {
       this.gl.TEXTURE_MAG_FILTER,
       this.gl.LINEAR
     );
+
+    if (
+      this.mediaElement?.tagName === "VIDEO" &&
+      this.mediaElement.readyState >= 2
+    ) {
+      this.gl.texImage2D(
+        this.gl.TEXTURE_2D,
+        0,
+        this.gl.RGBA,
+        this.gl.RGBA,
+        this.gl.UNSIGNED_BYTE,
+        this.mediaElement
+      );
+    } else {
+      // Initialize with transparent pixel
+      this.gl.texImage2D(
+        this.gl.TEXTURE_2D,
+        0,
+        this.gl.RGBA,
+        1,
+        1,
+        0,
+        this.gl.RGBA,
+        this.gl.UNSIGNED_BYTE,
+        new Uint8Array([0, 0, 0, 0])
+      );
+    }
+
+    this._hasTexture = true;
   }
 
   /**
@@ -841,6 +909,18 @@ class MediaShader extends HTMLElement {
       position: positionBuffer,
       texCoord: texCoordBuffer,
     };
+
+    // Initialize uniform locations
+    this.updateUniformLocations();
+
+    // Use the program
+    this.gl.useProgram(this.program);
+
+    // Set up initial texture state
+    const uTexture = this._uniformLocations.get("uTexture");
+    if (uTexture) {
+      this.gl.uniform1i(uTexture, 0);
+    }
   }
 
   /**
@@ -1050,18 +1130,29 @@ class MediaShader extends HTMLElement {
 
       this.gl.useProgram(this.program);
 
-      // Only update texture if we have media element
-      if (this.mediaElement && this.texture) {
+      // Only update texture if we have media element and it's an image
+      // (video textures are updated in the timeupdate event)
+      if (
+        this.mediaElement &&
+        this.texture &&
+        this.mediaElement.tagName === "IMG"
+      ) {
+        this.gl.activeTexture(this.gl.TEXTURE0);
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
-        this.gl.texImage2D(
-          this.gl.TEXTURE_2D,
-          0,
-          this.gl.RGBA,
-          this.gl.RGBA,
-          this.gl.UNSIGNED_BYTE,
-          this.mediaElement
-        );
-        this._hasTexture = true;
+        try {
+          this.gl.texImage2D(
+            this.gl.TEXTURE_2D,
+            0,
+            this.gl.RGBA,
+            this.gl.RGBA,
+            this.gl.UNSIGNED_BYTE,
+            this.mediaElement
+          );
+          this._hasTexture = true;
+        } catch (e) {
+          console.warn("Failed to update texture:", e);
+          this._hasTexture = false;
+        }
       }
 
       // Set built-in uniforms
@@ -1090,11 +1181,6 @@ class MediaShader extends HTMLElement {
       // Update mouse uniform
       const uMouse = this._uniformLocations.get("uMouse");
       if (uMouse) {
-        // If mouse is down, ensure positive values for click position
-        if (this._isMouseDown) {
-          this._mouseData[2] = Math.abs(this._mouseData[2]);
-          this._mouseData[3] = Math.abs(this._mouseData[3]);
-        }
         this.gl.uniform4fv(uMouse, this._mouseData);
       }
 
