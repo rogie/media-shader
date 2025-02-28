@@ -39,6 +39,131 @@ Add the component to your HTML:
 ></media-shader>
 ```
 
+### Comprehensive Examples
+
+#### Image with Shader Effect
+
+Apply a ripple effect to an image:
+
+```html
+<media-shader
+  src="path/to/your/image.jpg"
+  width="400"
+  height="300"
+  alt="Ripple effect on landscape"
+  fragment-shader="
+    precision highp float;
+    uniform sampler2D uTexture;
+    uniform float uTime;
+    varying vec2 vTexCoord;
+
+    void main() {
+      vec2 uv = vTexCoord;
+      float wave = sin(uv.x * 10.0 + uTime) * 0.01;
+      vec2 distortedUV = vec2(uv.x, uv.y + wave);
+      gl_FragColor = texture2D(uTexture, distortedUV);
+    }
+  "
+></media-shader>
+```
+
+#### Video with Real-time Effects
+
+Apply a color manipulation effect to a video:
+
+```html
+<media-shader
+  src="path/to/your/video.mp4"
+  width="640"
+  height="360"
+  playing
+  alt="Color effect on video"
+  fragment-shader="
+    precision highp float;
+    uniform sampler2D uTexture;
+    uniform float uTime;
+    varying vec2 vTexCoord;
+
+    void main() {
+      vec4 texColor = texture2D(uTexture, vTexCoord);
+      float r = texColor.r * (1.0 + sin(uTime) * 0.5);
+      float g = texColor.g * (1.0 + cos(uTime) * 0.5);
+      float b = texColor.b;
+      gl_FragColor = vec4(r, g, b, texColor.a);
+    }
+  "
+></media-shader>
+```
+
+#### Responsive Sizing
+
+Make the shader component responsive to its container:
+
+```html
+<style>
+  .shader-container {
+    width: 100%;
+    max-width: 800px;
+    aspect-ratio: 16/9;
+  }
+
+  media-shader {
+    width: 100% !important;
+    height: 100% !important;
+  }
+</style>
+
+<div class="shader-container">
+  <media-shader width="800" height="450" fragment-shader="..."></media-shader>
+</div>
+```
+
+#### Custom Uniforms
+
+Pass custom data to your shader:
+
+```html
+<media-shader
+  width="300"
+  height="200"
+  uniforms='{
+    "uColor": [1.0, 0.0, 0.0],
+    "uSpeed": 2.0,
+    "uIntensity": 0.5
+  }'
+  fragment-shader="
+    precision highp float;
+    uniform vec3 uColor;
+    uniform float uSpeed;
+    uniform float uIntensity;
+    uniform float uTime;
+    varying vec2 vTexCoord;
+
+    void main() {
+      vec2 uv = vTexCoord;
+      float pattern = sin(uv.x * 10.0 + uTime * uSpeed) * uIntensity;
+      vec3 color = uColor * pattern;
+      gl_FragColor = vec4(color, 1.0);
+    }
+  "
+></media-shader>
+```
+
+#### Lazy Loading
+
+Optimize performance with lazy loading:
+
+```html
+<media-shader
+  src="path/to/large-image.jpg"
+  width="800"
+  height="600"
+  loading="lazy"
+  alt="Lazy loaded shader effect"
+  fragment-shader="..."
+></media-shader>
+```
+
 ### Attributes
 
 - `src`: URL of the image or video to apply shaders to
