@@ -1,8 +1,8 @@
-# Shader Media
+# Media Shader
 
 A powerful web component for applying WebGL shader effects to images and videos. This component makes it easy to add real-time shader effects to your media elements with minimal setup.
 
-🎮 [Live Demo & Documentation](https://rogie.github.io/shader-media/)
+🎮 [Live Demo & Documentation](https://rogie.github.io/media-shader/)
 
 ## Features
 
@@ -18,7 +18,7 @@ A powerful web component for applying WebGL shader effects to images and videos.
 ## Installation
 
 ```bash
-npm install shader-media
+npm install media-shader
 ```
 
 ## Usage
@@ -26,7 +26,7 @@ npm install shader-media
 ### Import the Component
 
 ```javascript
-import "shader-media";
+import "media-shader";
 ```
 
 ### Basic Example

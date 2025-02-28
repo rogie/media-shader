@@ -1,5 +1,5 @@
 {
-  "name": "shader-media",
+  "name": "media-shader",
   "version": "1.0.0",
   "description": "A web component for applying WebGL shader effects to images and videos",
   "main": "media-shader.js",
@@ -21,10 +21,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rogie/shader-media.git"
+    "url": "git+https://github.com/rogie/media-shader.git"
   },
   "bugs": {
-    "url": "https://github.com/rogie/shader-media/issues"
+    "url": "https://github.com/rogie/media-shader/issues"
   },
-  "homepage": "https://github.com/rogie/shader-media#readme"
+  "homepage": "https://github.com/rogie/media-shader#readme"
 }
