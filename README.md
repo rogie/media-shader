@@ -2,6 +2,8 @@
 
 A powerful and flexible WebGL shader viewer implemented as a custom web component. This project allows you to easily add interactive shader effects to your web applications, with support for both standalone shaders and shader effects applied to images or videos.
 
+🎮 [Live Demo & Documentation](https://rogie.github.io/shader-media/)
+
 ## Features
 
 - 🎨 Custom WebGL shader support
