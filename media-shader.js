@@ -31,8 +31,10 @@ class MediaShader extends HTMLElement {
     const style = document.createElement("style");
     style.textContent = `
             :host {
-                display: inline-grid;
+                display: inline-block;
                 position: relative;
+                width: auto;
+                height: auto;
             }
             canvas {
                 display: block;
@@ -48,8 +50,8 @@ class MediaShader extends HTMLElement {
     this.texture = null;
     this.program = null;
     this.animationFrame = null;
-    this._width = null;
-    this._height = null;
+    this._width = 300;
+    this._height = 150;
     this._naturalWidth = null;
     this._naturalHeight = null;
     this._playing = false;
@@ -61,6 +63,20 @@ class MediaShader extends HTMLElement {
     this._startTime = performance.now();
     this._mouseData = new Float32Array(4);
     this._isMouseDown = false;
+
+    // Add ResizeObserver for handling CSS-based resizing
+    this._resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        // Only update if dimensions actually changed
+        const newWidth = entry.contentRect.width;
+        const newHeight = entry.contentRect.height;
+
+        // Skip if we have explicit attribute dimensions
+        if (this._width === null && this._height === null) {
+          this.updateCanvasSize();
+        }
+      }
+    });
 
     // Bind methods to this
     this._onMouseMove = this._onMouseMove.bind(this);
@@ -141,7 +157,7 @@ class MediaShader extends HTMLElement {
 
   /**
    * Gets the canvas width.
-   * @returns {string|null} The width in pixels or null if not set
+   * @returns {string|null} The width value or null if not set
    */
   get width() {
     return this.getAttribute("width");
@@ -150,14 +166,17 @@ class MediaShader extends HTMLElement {
   set width(value) {
     if (value) {
       this.setAttribute("width", value);
+      // Update the host element's width directly
+      this.style.width = value;
     } else {
       this.removeAttribute("width");
+      this.style.width = "";
     }
   }
 
   /**
    * Gets the canvas height.
-   * @returns {string|null} The height in pixels or null if not set
+   * @returns {string|null} The height value or null if not set
    */
   get height() {
     return this.getAttribute("height");
@@ -166,8 +185,11 @@ class MediaShader extends HTMLElement {
   set height(value) {
     if (value) {
       this.setAttribute("height", value);
+      // Update the host element's height directly
+      this.style.height = value;
     } else {
       this.removeAttribute("height");
+      this.style.height = "";
     }
   }
 
@@ -244,6 +266,9 @@ class MediaShader extends HTMLElement {
    * Initializes the component with attribute values.
    */
   connectedCallback() {
+    // Start observing size changes
+    this._resizeObserver.observe(this);
+
     // Set up intersection observer for both lazy and eager loading
     this._intersectionObserver = new IntersectionObserver(
       (entries) => {
@@ -327,11 +352,13 @@ class MediaShader extends HTMLElement {
       this.updateUniforms(uniforms);
     }
     if (width) {
-      this._width = parseInt(width, 10);
+      this._width = width;
+      this.style.width = width;
       this.updateCanvasSize();
     }
     if (height) {
-      this._height = parseInt(height, 10);
+      this._height = height;
+      this.style.height = height;
       this.updateCanvasSize();
     }
     if (src) {
@@ -413,6 +440,9 @@ class MediaShader extends HTMLElement {
    * Cleans up resources and stops rendering.
    */
   disconnectedCallback() {
+    // Stop observing size changes
+    this._resizeObserver.disconnect();
+
     // Disconnect intersection observer
     if (this._intersectionObserver) {
       this._intersectionObserver.disconnect();
@@ -443,6 +473,10 @@ class MediaShader extends HTMLElement {
       "playing",
       "alt",
       "loading",
+      "muted",
+      "playsinline",
+      "loop",
+      "autoplay",
     ];
   }
 
@@ -463,11 +497,13 @@ class MediaShader extends HTMLElement {
         this.updateShader(newValue || this.defaultFragmentShader);
         break;
       case "width":
-        this._width = newValue ? parseInt(newValue, 10) : null;
+        this._width = newValue;
+        this.style.width = newValue;
         this.updateCanvasSize();
         break;
       case "height":
-        this._height = newValue ? parseInt(newValue, 10) : null;
+        this._height = newValue;
+        this.style.height = newValue;
         this.updateCanvasSize();
         break;
       case "uniforms":
@@ -499,6 +535,26 @@ class MediaShader extends HTMLElement {
           this.initializeComponent();
         }
         break;
+      case "muted":
+        if (this.mediaElement?.tagName === "VIDEO") {
+          this.mediaElement.muted = newValue !== "false";
+        }
+        break;
+      case "playsinline":
+        if (this.mediaElement?.tagName === "VIDEO") {
+          this.mediaElement.playsInline = newValue !== "false";
+        }
+        break;
+      case "loop":
+        if (this.mediaElement?.tagName === "VIDEO") {
+          this.mediaElement.loop = newValue !== "false";
+        }
+        break;
+      case "autoplay":
+        if (this.mediaElement?.tagName === "VIDEO") {
+          this.mediaElement.autoplay = newValue !== "false";
+        }
+        break;
     }
   }
 
@@ -507,65 +563,44 @@ class MediaShader extends HTMLElement {
    * Maintains aspect ratio when only width or height is specified.
    */
   updateCanvasSize() {
-    // Early return if canvas doesn't exist
     if (!this.canvas) {
       console.warn("Cannot update canvas size: canvas element does not exist");
       return;
     }
 
-    let cssWidth = this._width;
-    let cssHeight = this._height;
+    // Get natural dimensions from media if available
+    const naturalWidth =
+      this.mediaElement?.naturalWidth || this.mediaElement?.videoWidth;
+    const naturalHeight =
+      this.mediaElement?.naturalHeight || this.mediaElement?.videoHeight;
 
-    if (this.mediaElement) {
-      // Get natural dimensions
-      const naturalWidth =
-        this.mediaElement.naturalWidth || this.mediaElement.videoWidth;
-      const naturalHeight =
-        this.mediaElement.naturalHeight || this.mediaElement.videoHeight;
-
-      // If media element has dimensions, use them as reference
-      if (naturalWidth && naturalHeight) {
-        this._naturalWidth = naturalWidth;
-        this._naturalHeight = naturalHeight;
-
-        // If neither width nor height is specified, use natural dimensions
-        if (!cssWidth && !cssHeight) {
-          cssWidth = naturalWidth;
-          cssHeight = naturalHeight;
-        }
-        // If only width is specified, calculate height maintaining aspect ratio
-        else if (cssWidth && !cssHeight) {
-          cssHeight = Math.round(cssWidth * (naturalHeight / naturalWidth));
-        }
-        // If only height is specified, calculate width maintaining aspect ratio
-        else if (!cssWidth && cssHeight) {
-          cssWidth = Math.round(cssHeight * (naturalWidth / naturalHeight));
-        }
-
-        // For media elements, we set explicit CSS dimensions
-        this.style.width = `${cssWidth}px`;
-        this.style.height = `${cssHeight}px`;
-      }
-    } else {
-      // For fragment-shader-only cases, use default dimensions if none provided
-      if (!cssWidth && !cssHeight) {
-        cssWidth = 300; // Default width
-        cssHeight = 150; // Default height (2:1 ratio like default canvas)
-      } else if (cssWidth && !cssHeight) {
-        cssHeight = Math.round(cssWidth / 2); // Maintain 2:1 ratio
-      } else if (!cssWidth && cssHeight) {
-        cssWidth = cssHeight * 2; // Maintain 2:1 ratio
-      }
+    // Store natural dimensions for aspect ratio
+    if (naturalWidth && naturalHeight) {
+      this._naturalWidth = naturalWidth;
+      this._naturalHeight = naturalHeight;
+      // Set aspect ratio on the host element
+      this.style.aspectRatio = `${naturalWidth} / ${naturalHeight}`;
     }
 
-    // Get device pixel ratio (default to 1 if not available)
+    let finalWidth = this._width;
+    let finalHeight = this._height;
+    let rect = this.getBoundingClientRect();
+
+    if (this._width) {
+      finalWidth = rect.width;
+    }
+    if (this._height) {
+      finalHeight = rect.height;
+    }
+
+    // Get device pixel ratio for high DPI displays
     const dpr = window.devicePixelRatio || 1;
 
-    // Set the canvas's backing store dimensions accounting for device pixel ratio
-    this.canvas.width = Math.round(cssWidth * dpr);
-    this.canvas.height = Math.round(cssHeight * dpr);
+    // Set the canvas dimensions
+    this.canvas.width = Math.round(finalWidth * dpr);
+    this.canvas.height = Math.round(finalHeight * dpr);
 
-    // Ensure WebGL viewport matches new size
+    // Update WebGL viewport
     if (this.gl) {
       this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     }
@@ -638,115 +673,148 @@ class MediaShader extends HTMLElement {
     this.mediaElement.style.display = "none";
     this.shadowRoot.appendChild(this.mediaElement);
 
-    if (isVideo) {
-      // Set up video element
-      this.mediaElement.muted = true;
-      this.mediaElement.playsInline = true;
-      this.mediaElement.loop = true;
-      this.mediaElement.autoplay = false;
+    try {
+      await new Promise((resolve, reject) => {
+        if (isVideo) {
+          // Replace hardcoded values with attribute values
+          this.mediaElement.muted = this.getAttribute("muted") !== "false";
+          this.mediaElement.playsInline =
+            this.getAttribute("playsinline") !== "false";
+          this.mediaElement.loop = this.getAttribute("loop") !== "false";
+          this.mediaElement.autoplay = this.getAttribute("autoplay") === "true";
 
-      // Set up video texture update using requestVideoFrameCallback if available
-      if ("requestVideoFrameCallback" in this.mediaElement) {
-        const updateVideoTexture = () => {
-          if (this.texture && this.mediaElement.readyState >= 2) {
-            this.gl.activeTexture(this.gl.TEXTURE0);
-            this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
-            this.gl.texImage2D(
-              this.gl.TEXTURE_2D,
-              0,
-              this.gl.RGBA,
-              this.gl.RGBA,
-              this.gl.UNSIGNED_BYTE,
-              this.mediaElement
-            );
-          }
-          if (this._playing && this.isConnected) {
+          // Wait for metadata to load before proceeding
+          this.mediaElement.addEventListener(
+            "loadedmetadata",
+            async () => {
+              if (!this.isConnected || !this.mediaElement || !this.canvas) {
+                return reject(new Error("Component disconnected during load"));
+              }
+
+              // Update canvas size now that we have video dimensions
+              this.updateCanvasSize();
+              this.createTexture();
+
+              // Initialize video playback
+              const shouldPlay = this.getAttribute("playing") !== "false";
+              this._playing = shouldPlay;
+
+              if (shouldPlay) {
+                try {
+                  await this.mediaElement.play();
+                } catch (e) {
+                  console.warn("Initial video play failed:", e);
+                  this._playing = false;
+                  this.setAttribute("playing", "false");
+                }
+              }
+
+              resolve();
+            },
+            { once: true }
+          );
+
+          // Define updateVideoTexture function
+          const updateVideoTexture = () => {
+            if (this.texture && this.mediaElement.readyState >= 2) {
+              this.gl.activeTexture(this.gl.TEXTURE0);
+              this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+              this.gl.texImage2D(
+                this.gl.TEXTURE_2D,
+                0,
+                this.gl.RGBA,
+                this.gl.RGBA,
+                this.gl.UNSIGNED_BYTE,
+                this.mediaElement
+              );
+            }
+            if (this._playing && this.isConnected) {
+              if ("requestVideoFrameCallback" in this.mediaElement) {
+                this._videoFrameCallback =
+                  this.mediaElement.requestVideoFrameCallback(
+                    updateVideoTexture
+                  );
+              } else {
+                this._videoFrameCallback =
+                  requestAnimationFrame(updateVideoTexture);
+              }
+            }
+          };
+
+          // Set up video texture update using requestVideoFrameCallback if available
+          if ("requestVideoFrameCallback" in this.mediaElement) {
             this._videoFrameCallback =
               this.mediaElement.requestVideoFrameCallback(updateVideoTexture);
-          }
-        };
-        this._videoFrameCallback =
-          this.mediaElement.requestVideoFrameCallback(updateVideoTexture);
-      } else {
-        // Fallback to requestAnimationFrame for browsers that don't support requestVideoFrameCallback
-        const updateVideoTexture = () => {
-          if (this.texture && this.mediaElement.readyState >= 2) {
-            this.gl.activeTexture(this.gl.TEXTURE0);
-            this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
-            this.gl.texImage2D(
-              this.gl.TEXTURE_2D,
-              0,
-              this.gl.RGBA,
-              this.gl.RGBA,
-              this.gl.UNSIGNED_BYTE,
-              this.mediaElement
-            );
-          }
-          if (this._playing && this.isConnected) {
+          } else {
             this._videoFrameCallback =
               requestAnimationFrame(updateVideoTexture);
           }
-        };
-        this._videoFrameCallback = requestAnimationFrame(updateVideoTexture);
-      }
 
-      // Add event listeners for play/pause
-      this.mediaElement.addEventListener("play", () => {
-        this._playing = true;
-        // Restart frame updates
-        if ("requestVideoFrameCallback" in this.mediaElement) {
-          this._videoFrameCallback =
-            this.mediaElement.requestVideoFrameCallback(updateVideoTexture);
-        } else {
-          this._videoFrameCallback = requestAnimationFrame(updateVideoTexture);
-        }
-      });
-
-      this.mediaElement.addEventListener("pause", () => {
-        this._playing = false;
-        // Cancel frame updates
-        if ("requestVideoFrameCallback" in this.mediaElement) {
-          this.mediaElement.cancelVideoFrameCallback(this._videoFrameCallback);
-        } else {
-          cancelAnimationFrame(this._videoFrameCallback);
-        }
-      });
-    }
-
-    try {
-      await new Promise((resolve, reject) => {
-        const onLoad = async () => {
-          if (!this.isConnected || !this.mediaElement || !this.canvas) {
-            return reject(new Error("Component disconnected during load"));
-          }
-
-          this.updateCanvasSize();
-          this.createTexture();
-
-          if (isVideo) {
-            // Initialize video playback
-            const shouldPlay = this.getAttribute("playing") !== "false";
-            this._playing = shouldPlay;
-
-            if (shouldPlay) {
-              try {
-                await this.mediaElement.play();
-              } catch (e) {
-                console.warn("Initial video play failed:", e);
-                this._playing = false;
-                this.setAttribute("playing", "false");
-              }
+          // Add event listeners for play/pause
+          this.mediaElement.addEventListener("play", () => {
+            this._playing = true;
+            // Restart frame updates
+            if ("requestVideoFrameCallback" in this.mediaElement) {
+              this._videoFrameCallback =
+                this.mediaElement.requestVideoFrameCallback(updateVideoTexture);
+            } else {
+              this._videoFrameCallback =
+                requestAnimationFrame(updateVideoTexture);
             }
+          });
+
+          this.mediaElement.addEventListener("pause", () => {
+            this._playing = false;
+            // Cancel frame updates
+            if ("requestVideoFrameCallback" in this.mediaElement) {
+              this.mediaElement.cancelVideoFrameCallback(
+                this._videoFrameCallback
+              );
+            } else {
+              cancelAnimationFrame(this._videoFrameCallback);
+            }
+          });
+
+          // Start loading the video
+          this.mediaElement.src = src;
+        } else {
+          // For images
+
+          this.mediaElement.onload = async () => {
+            if (!this.isConnected || !this.mediaElement || !this.canvas) {
+              return reject(new Error("Component disconnected during load"));
+            }
+
+            this.updateCanvasSize();
+            this.createTexture();
+
+            // For images, update the texture immediately
+            this.gl.activeTexture(this.gl.TEXTURE0);
+            this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+            this.gl.texImage2D(
+              this.gl.TEXTURE_2D,
+              0,
+              this.gl.RGBA,
+              this.gl.RGBA,
+              this.gl.UNSIGNED_BYTE,
+              this.mediaElement
+            );
+            this._hasTexture = true;
+
+            resolve();
+          };
+
+          if (this.mediaElement.complete) {
+            this.mediaElement.onload();
           }
 
-          this.startRenderLoop();
-          resolve();
-        };
-
-        this.mediaElement.onloadeddata = onLoad;
-        this.mediaElement.onerror = reject;
-        this.mediaElement.src = src;
+          this.mediaElement.onerror = reject;
+          this.mediaElement.src = src;
+        }
       });
+
+      // Start render loop after media is loaded
+      this.startRenderLoop();
     } catch (error) {
       console.error("Error loading media:", error);
       if (this.mediaElement) {
@@ -1074,7 +1142,7 @@ class MediaShader extends HTMLElement {
     for (const [name, value] of Object.entries(this._uniforms)) {
       const location = this._uniformLocations.get(name);
       if (location === undefined) {
-        console.warn(`No location found for uniform '${name}'`);
+        //console.warn(`No location found for uniform '${name}'`);
         continue;
       }
 

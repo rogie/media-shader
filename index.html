@@ -13,51 +13,12 @@
           href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAERlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAA6ABAAMAAAABAAEAAKACAAQAAAABAAAAIKADAAQAAAABAAAAIAAAAACshmLzAAABqklEQVRYCe2WTU7DMBCFx4WKBP+7gA0IVkjAkh1H4AhwAzgCR+AG3IBjsGKJxAKJLaDAhv8FKqh4PFOiNI7TxjZuAoInjZK48Zt5Mx47TlNpqYEZaKDhG7ZnS4wqMBHpKHCz8NrMQnRvAxEZVeC1P4xXpXOjnhXaE2KAGcjlQIgBl3kKASE6oQacDYToRAn4GgjViTYQohMt4GsgRMfLgI+BEB1vAYqBEB0SAz46JAYmjPk6kCSJmJf+qNuVXq8nRVHI7e2b7O3tys7Otj7TMvn29iYXFxfy+Pgo7XZb1tbWZWtrS9bX12V5eVmWlpaMtVw6nY5sbm7KwsLCVB1qYDweS57n8vLyIk9PT3J/fy8PDw9GZG5uTgPY39+XtbU12djYkHa7bdbNz8/L4uLiVB2KgRQiRVFIlmXy/PwsWZbJ09OzGXl3d1c6nY6kaSpJkuj9QK/Xk4ODA/MBhI7qUAzUvwP0d+jAR4digGrAR4diwOUb8NGhGLDNuBrw1aEYsEVcDVB0KAZcPyOKDtXATyNZlg3TNP1W/0eUX8LQXGqgqoF/8zT8AXL7RkH2kR7PAAAAAElFTkSuQmCC">
     <style>
         body {
-            font-family: system-ui, -apple-system, sans-serif;
-            max-width: 1200px;
+            max-width: 80vw;
             margin: 0 auto;
-            padding: 20px;
-            background: #f5f5f5;
-        }
-
-        .example {
-            margin: 30px 0;
-            padding: 20px;
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        h1,
-        h2 {
-            color: #333;
-        }
-
-        .controls {
-            margin: 10px 0;
-        }
-
-        select,
-        button {
-            padding: 8px;
-            margin: 5px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
-
-        button {
-            background: #007bff;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #0056b3;
         }
 
         pre {
-            background: #f8f9fa;
+            background: var(--figma-color-bg-secondary);
             padding: 15px;
             border-radius: 4px;
             overflow-x: auto;
@@ -70,18 +31,6 @@
             margin: 30px 0;
         }
 
-        .shader-card {
-            background: white;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .shader-card h3 {
-            margin: 0 0 10px 0;
-            font-size: 1rem;
-            color: #333;
-        }
 
         .shader-card media-shader {
             width: 300px;
@@ -90,10 +39,16 @@
             margin: 0 auto;
         }
     </style>
+    <link rel="stylesheet"
+          href="https://unpkg.com/@rogieking/figui3@latest/fig.css" />
+    <script src="https://unpkg.com/@rogieking/figui3@latest/fig.js"></script>
 </head>
 
 <body>
-    <h1>Shader Viewer Examples</h1>
+    <div class="example"
+         style="margin-bottom: 40px;">
+        <h1>Shader Viewer Examples</h1>
+    </div>
 
     <div class="example">
         <h2>Animated Fragment Shaders</h2>
@@ -101,7 +56,7 @@
         <div class="shader-grid">
             <div class="shader-card">
                 <h3>Plasma Wave</h3>
-                <media-shader width="300"
+                <media-shader width="100%"
                               height="200"
                               fragment-shader="
                     precision highp float;
@@ -331,83 +286,80 @@
         </div>
     </div>
 
-    <div class="image-selector"
-         style="margin: 20px 0; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);">
-        <label for="imageSelect"
-               style="font-weight: bold; margin-right: 10px;">Select Image:</label>
-        <select id="imageSelect"
-                style="padding: 8px; border-radius: 4px; border: 1px solid #ddd; min-width: 200px;"
-                onchange="updateShaderGridImages(this.value)">
-            <option
-                    value="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Abstract Lights</option>
-            <option
-                    value="https://images.pexels.com/photos/3075993/pexels-photo-3075993.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Mountain Landscape</option>
-            <option
-                    value="https://images.pexels.com/photos/3052361/pexels-photo-3052361.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Ocean Waves</option>
-            <option
-                    value="https://images.pexels.com/photos/1420440/pexels-photo-1420440.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Neon City</option>
-            <option
-                    value="https://images.pexels.com/photos/1366919/pexels-photo-1366919.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Colorful Buildings</option>
-            <option
-                    value="https://images.pexels.com/photos/1647972/pexels-photo-1647972.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Forest Path</option>
-            <option
-                    value="https://images.pexels.com/photos/1738434/pexels-photo-1738434.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Desert Dunes</option>
-            <option
-                    value="https://images.pexels.com/photos/1998439/pexels-photo-1998439.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Space Galaxy</option>
-            <option
-                    value="https://images.pexels.com/photos/1774389/pexels-photo-1774389.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Urban Street</option>
-            <option
-                    value="https://images.pexels.com/photos/1770809/pexels-photo-1770809.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Sunset Beach</option>
-            <option
-                    value="https://images.pexels.com/photos/1629236/pexels-photo-1629236.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Snow Mountains</option>
-            <option
-                    value="https://images.pexels.com/photos/1761279/pexels-photo-1761279.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Autumn Forest</option>
-            <option
-                    value="https://images.pexels.com/photos/1766838/pexels-photo-1766838.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Waterfall</option>
-            <option
-                    value="https://images.pexels.com/photos/1789968/pexels-photo-1789968.jpeg?auto=compress&cs=tinysrgb&w=800">
-                City Night</option>
-            <option
-                    value="https://images.pexels.com/photos/1784577/pexels-photo-1784577.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Flower Field</option>
-            <option
-                    value="https://images.pexels.com/photos/1792626/pexels-photo-1792626.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Architecture</option>
-            <option
-                    value="https://images.pexels.com/photos/1802268/pexels-photo-1802268.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Starry Night</option>
-            <option
-                    value="https://images.pexels.com/photos/1808329/pexels-photo-1808329.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Green Valley</option>
-            <option
-                    value="https://images.pexels.com/photos/1816714/pexels-photo-1816714.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Aerial Beach</option>
-            <option
-                    value="https://images.pexels.com/photos/1828875/pexels-photo-1828875.jpeg?auto=compress&cs=tinysrgb&w=800">
-                Abstract Art</option>
-        </select>
-    </div>
-
-    <div class="shader-grid">
-        <div class="shader-card">
-            <h3>Glitch Effect</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+    <div class="example">
+        <h2>Image Effects</h2>
+        <div>
+            <label for="imageSelect">Select Image:</label>
+            <select id="imageSelect">
+                <option
+                        value="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Abstract Lights</option>
+                <option
+                        value="https://images.pexels.com/photos/3075993/pexels-photo-3075993.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Mountain Landscape</option>
+                <option
+                        value="https://images.pexels.com/photos/3052361/pexels-photo-3052361.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Ocean Waves</option>
+                <option
+                        value="https://images.pexels.com/photos/1420440/pexels-photo-1420440.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Neon City</option>
+                <option
+                        value="https://images.pexels.com/photos/1366919/pexels-photo-1366919.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Colorful Buildings</option>
+                <option
+                        value="https://images.pexels.com/photos/1647972/pexels-photo-1647972.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Forest Path</option>
+                <option
+                        value="https://images.pexels.com/photos/1738434/pexels-photo-1738434.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Desert Dunes</option>
+                <option
+                        value="https://images.pexels.com/photos/1998439/pexels-photo-1998439.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Space Galaxy</option>
+                <option
+                        value="https://images.pexels.com/photos/1774389/pexels-photo-1774389.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Urban Street</option>
+                <option
+                        value="https://images.pexels.com/photos/1770809/pexels-photo-1770809.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Sunset Beach</option>
+                <option
+                        value="https://images.pexels.com/photos/1629236/pexels-photo-1629236.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Snow Mountains</option>
+                <option
+                        value="https://images.pexels.com/photos/1761279/pexels-photo-1761279.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Autumn Forest</option>
+                <option
+                        value="https://images.pexels.com/photos/1766838/pexels-photo-1766838.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Waterfall</option>
+                <option
+                        value="https://images.pexels.com/photos/1789968/pexels-photo-1789968.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    City Night</option>
+                <option
+                        value="https://images.pexels.com/photos/1784577/pexels-photo-1784577.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Flower Field</option>
+                <option
+                        value="https://images.pexels.com/photos/1792626/pexels-photo-1792626.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Architecture</option>
+                <option
+                        value="https://images.pexels.com/photos/1802268/pexels-photo-1802268.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Starry Night</option>
+                <option
+                        value="https://images.pexels.com/photos/1808329/pexels-photo-1808329.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Green Valley</option>
+                <option
+                        value="https://images.pexels.com/photos/1816714/pexels-photo-1816714.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Aerial Beach</option>
+                <option
+                        value="https://images.pexels.com/photos/1828875/pexels-photo-1828875.jpeg?auto=compress&cs=tinysrgb&w=800">
+                    Abstract Art</option>
+            </select>
+        </div>
+        <div class="shader-grid image-grid">
+            <div class="shader-card">
+                <h3>Glitch Effect</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -425,15 +377,15 @@
                         vec4 color = texture2D(uTexture, glitchUV);
                         gl_FragColor = color;
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Chromatic Aberration</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Chromatic Aberration</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -446,15 +398,15 @@
                         col.a = 1.0;
                         gl_FragColor = col;
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Halftone</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Halftone</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -468,15 +420,15 @@
                         float circle = smoothstep(gray, gray + 0.1, dist);
                         gl_FragColor = vec4(vec3(circle), 1.0);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Neon Glow</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Neon Glow</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -486,15 +438,15 @@
                         vec3 neon = vec3(0.0, 1.0, 1.0) * pow(brightness, 2.0);
                         gl_FragColor = vec4(color.rgb + neon, 1.0);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Oil Painting</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Oil Painting</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -513,15 +465,15 @@
                         color /= pow(radius * 2.0 + 1.0, 2.0);
                         gl_FragColor = color;
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Pixelation Wave</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Pixelation Wave</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -530,15 +482,15 @@
                         vec2 coord = floor(vTexCoord * pixels) / pixels;
                         gl_FragColor = texture2D(uTexture, coord);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Rainbow Ripple</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Rainbow Ripple</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -554,15 +506,15 @@
                         );
                         gl_FragColor = vec4(mix(color.rgb, rainbow, 0.3), 1.0);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Matrix Rain</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Matrix Rain</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -578,15 +530,15 @@
                         vec3 matrix = vec3(0.0, brightness * rain, 0.0);
                         gl_FragColor = vec4(mix(color.rgb, matrix, 0.5), 1.0);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Grayscale</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Grayscale</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -595,15 +547,15 @@
                         float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
                         gl_FragColor = vec4(vec3(gray), color.a);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Sepia</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Sepia</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -616,15 +568,15 @@
                         );
                         gl_FragColor = vec4(sepia, color.a);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Invert</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Invert</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -632,15 +584,15 @@
                         vec4 color = texture2D(uTexture, vTexCoord);
                         gl_FragColor = vec4(1.0 - color.rgb, color.a);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Vignette</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Vignette</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -651,15 +603,15 @@
                         float vignette = 1.0 - dist * 1.5;
                         gl_FragColor = vec4(color.rgb * vignette, color.a);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Pixelate</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Pixelate</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -668,15 +620,15 @@
                         vec2 coord = floor(vTexCoord * pixels) / pixels;
                         gl_FragColor = texture2D(uTexture, coord);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Edge Detection</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Edge Detection</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -688,15 +640,15 @@
                         vec4 edge = abs(c - n) + abs(c - e);
                         gl_FragColor = vec4(edge.rgb, 1.0);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>RGB Split</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>RGB Split</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -707,15 +659,15 @@
                         vec4 b = texture2D(uTexture, vTexCoord - vec2(offset, 0.0));
                         gl_FragColor = vec4(r.r, g.g, b.b, 1.0);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Hue Rotate</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Hue Rotate</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -727,15 +679,15 @@
                         vec3 rotated = vec3(color.rgb * c + cross(k, color.rgb) * sin(angle) + k * dot(k, color.rgb) * (1.0 - c));
                         gl_FragColor = vec4(rotated, color.a);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Posterize</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Posterize</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -744,15 +696,15 @@
                         float levels = 5.0;
                         gl_FragColor = vec4(floor(color.rgb * levels) / levels, color.a);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Scanlines</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Scanlines</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -761,15 +713,15 @@
                         float scanline = sin(vTexCoord.y * 400.0) * 0.1;
                         gl_FragColor = vec4(color.rgb - scanline, color.a);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Kaleidoscope</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Kaleidoscope</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -781,15 +733,15 @@
                         coord = radius * vec2(cos(angle), sin(angle)) + 0.5;
                         gl_FragColor = texture2D(uTexture, coord);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Ripple</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Ripple</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -800,15 +752,15 @@
                         coord += (coord - center) * sin(dist * 50.0) * 0.05;
                         gl_FragColor = texture2D(uTexture, coord);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Swirl</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Swirl</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -820,15 +772,15 @@
                         coord = vec2(cos(angle), sin(angle)) * dist + center;
                         gl_FragColor = texture2D(uTexture, coord);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Emboss</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Emboss</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -839,15 +791,15 @@
                         vec4 emboss = (color - colorL) + 0.5;
                         gl_FragColor = vec4(emboss.rgb, 1.0);
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Mosaic</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Mosaic</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -857,15 +809,15 @@
                         vec4 color = texture2D(uTexture, coord);
                         gl_FragColor = color;
                     }">
-            </media-shader>
-        </div>
+                </media-shader>
+            </div>
 
-        <div class="shader-card">
-            <h3>Toon Shader</h3>
-            <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                          width="300"
-                          height="200"
-                          fragment-shader="
+            <div class="shader-card">
+                <h3>Toon Shader</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
                     precision highp float;
                     uniform sampler2D uTexture;
                     varying vec2 vTexCoord;
@@ -875,7 +827,8 @@
                         color.rgb = floor(color.rgb * levels + 0.5) / levels;
                         gl_FragColor = color;
                     }">
-            </media-shader>
+                </media-shader>
+            </div>
         </div>
     </div>
 
@@ -926,25 +879,10 @@
 &lt;media-shader src="video.mp4"&gt;&lt;/media-shader&gt;
         </pre>
 
-        <h3>HLS Stream Example</h3>
-        <media-shader src="https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8"
-                      style="max-width: 100%;">
-        </media-shader>
-        <pre>
-&lt;media-shader src="stream.m3u8"&gt;&lt;/media-shader&gt;
-        </pre>
-
-        <h3>DASH Stream Example</h3>
-        <media-shader src="https://dash.akamaized.net/dash264/TestCases/1a/netflix/exMPD_BIP_TC1.mpd"
-                      style="max-width: 100%;">
-        </media-shader>
-        <pre>
-&lt;media-shader src="stream.mpd"&gt;&lt;/media-shader&gt;
-        </pre>
-
         <p class="note"
            style="margin-top: 20px; font-style: italic; color: #666;">
-            Note: Video format support depends on your browser's capabilities. MP4 (H.264) is the most widely supported
+            Note: Video format support depends on your browser's capabilities. MP4 (H.264) is the most widely
+            supported
             format across all browsers.
             For best compatibility, use MP4 format or HLS/DASH streaming.
         </p>
@@ -966,37 +904,19 @@
                       renderer="webgpu"
                       src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                       fragment-shader="
-            precision highp float;
-            uniform sampler2D uTexture;
-            uniform vec3 uTintColor;
-            uniform float uMixRatio;
-            varying vec2 vTexCoord;
+                precision highp float;
+                uniform sampler2D uTexture;
+                uniform vec3 uTintColor;
+                uniform float uMixRatio;
+                varying vec2 vTexCoord;
 
-            void main() {
-                vec4 texColor = texture2D(uTexture, vTexCoord);
-                vec3 tinted = texColor.rgb * uTintColor;
-                gl_FragColor = vec4(mix(texColor.rgb, tinted, uMixRatio), texColor.a);
-            }">
+                void main() {
+                    vec4 texColor = texture2D(uTexture, vTexCoord);
+                    vec3 tinted = texColor.rgb * uTintColor;
+                    gl_FragColor = vec4(mix(texColor.rgb, tinted, uMixRatio), texColor.a);
+                }">
         </media-shader>
 
-        <h3>WebGL2 Version</h3>
-        <media-shader id="uniformsDemoGL"
-                      renderer="webgl2"
-                      src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
-                      fragment-shader="
-            precision highp float;
-            uniform sampler2D uTexture;
-            uniform vec3 uTintColor;
-            uniform float uMixRatio;
-            varying vec2 vTexCoord;
-
-            void main() {
-                vec4 texColor = texture2D(uTexture, vTexCoord);
-                vec3 tinted = texColor.rgb * uTintColor;
-                gl_FragColor = vec4(mix(texColor.rgb, tinted, uMixRatio), texColor.a);
-            }">
-        </media-shader>
-        <pre id="currentUniforms">Current uniforms: {"uTintColor": [1.0, 0.5, 0.0], "uMixRatio": 0.5}</pre>
     </div>
 
     <div class="example">
@@ -1035,89 +955,214 @@
         </pre>
     </div>
 
+    <div class="example">
+        <h2>Interactive Video Uniforms Example</h2>
+        <div class="controls"
+             style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px;">
+            <div>
+                <label for="effectIntensity">Effect Intensity:</label>
+                <fig-slider id="effectIntensity"
+                            min="0"
+                            max="100"
+                            value="50"
+                            oninput="updateVideoUniforms()">
+            </div>
+            <div>
+                <label for="colorShift">Color Shift:</label>
+                <fig-slider id="colorShift"
+                            min="0"
+                            max="100"
+                            value="50"
+                            oninput="updateVideoUniforms()">
+            </div>
+            <div>
+                <label for="distortionAmount">Distortion:</label>
+                <fig-slider id="distortionAmount"
+                            min="0"
+                            max="100"
+                            value="30"
+                            oninput="updateVideoUniforms()">
+            </div>
+            <div>
+                <label for="timeSpeed">Time Speed:</label>
+                <fig-slider id="timeSpeed"
+                            min="0"
+                            max="100"
+                            value="50"
+                            oninput="updateVideoUniforms()">
+            </div>
+            <div>
+                <label for="effectType">Effect Type:</label>
+                <select id="effectType"
+                        onchange="updateVideoUniforms()">
+                    <option value="ripple">Ripple</option>
+                    <option value="kaleidoscope">Kaleidoscope</option>
+                    <option value="pixelate">Pixelate</option>
+                    <option value="colorize">Colorize</option>
+                </select>
+            </div>
+        </div>
+        <media-shader id="uniformVideoDemo"
+                      src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                      style="max-width: 100%; margin-bottom: 20px;"
+                      fragment-shader="
+            precision highp float;
+            uniform sampler2D uTexture;
+            uniform float uTime;
+            uniform float uIntensity;
+            uniform float uColorShift;
+            uniform float uDistortion;
+            uniform float uTimeSpeed;
+            uniform int uEffectType;
+            varying vec2 vTexCoord;
+
+            vec2 ripple(vec2 uv, float intensity, float time) {
+                vec2 center = vec2(0.5);
+                float dist = distance(uv, center);
+                float angle = atan(uv.y - 0.5, uv.x - 0.5);
+                float wave = sin(dist * 20.0 - time * 2.0) * intensity;
+                return uv + vec2(cos(angle), sin(angle)) * wave;
+            }
+
+            vec2 kaleidoscope(vec2 uv, float intensity) {
+                vec2 center = vec2(0.5);
+                vec2 coord = uv - center;
+                float angle = atan(coord.y, coord.x);
+                float radius = length(coord);
+                angle = mod(angle, 3.14159 * 2.0 / (6.0 + intensity * 10.0)) - 
+                       3.14159 / (6.0 + intensity * 10.0);
+                return vec2(cos(angle), sin(angle)) * radius + center;
+            }
+
+            vec2 pixelate(vec2 uv, float intensity) {
+                float pixels = 10.0 + (1.0 - intensity) * 100.0;
+                return floor(uv * pixels) / pixels;
+            }
+
+            vec3 colorize(vec3 color, float shift, float intensity) {
+                vec3 shifted = vec3(
+                    color.r * (1.0 + sin(shift * 6.28) * intensity),
+                    color.g * (1.0 + sin(shift * 6.28 + 2.094) * intensity),
+                    color.b * (1.0 + sin(shift * 6.28 + 4.189) * intensity)
+                );
+                return clamp(shifted, 0.0, 1.0);
+            }
+
+            void main() {
+                vec2 uv = vTexCoord;
+                float time = uTime * uTimeSpeed;
+                
+                // Apply different effects based on type
+                if (uEffectType == 0) { // Ripple
+                    uv = ripple(uv, uDistortion * 0.02, time);
+                } else if (uEffectType == 1) { // Kaleidoscope
+                    uv = kaleidoscope(uv, uDistortion * 0.1);
+                } else if (uEffectType == 2) { // Pixelate
+                    uv = pixelate(uv, uDistortion * 0.1);
+                }
+                
+                // Sample the texture with modified UV
+                vec4 color = texture2D(uTexture, uv);
+                
+                // Apply color effects
+                if (uEffectType == 3) { // Colorize
+                    color.rgb = colorize(color.rgb, time, uColorShift * 0.1);
+                }
+                
+                // Apply intensity
+                color.rgb = mix(texture2D(uTexture, vTexCoord).rgb, color.rgb, uIntensity);
+                
+                gl_FragColor = color;
+            }">
+        </media-shader>
+        <pre id="currentVideoUniforms">
+// Current uniforms will be displayed here
+        </pre>
+    </div>
+
     <script src="./media-shader.js"></script>
     <script>
         const shaders = {
             normal: `
-                precision highp float;
-                uniform sampler2D uTexture;
-                uniform vec2 uResolution;
-                varying vec2 vTexCoord;
+            precision highp float;
+            uniform sampler2D uTexture;
+            uniform vec2 uResolution;
+            varying vec2 vTexCoord;
 
-                void main() {
-                    gl_FragColor = texture2D(uTexture, vTexCoord);
-                }
-            `,
+            void main() {
+                gl_FragColor = texture2D(uTexture, vTexCoord);
+            }
+        `,
             grayscale: `
-                precision highp float;
-                uniform sampler2D uTexture;
-                uniform vec2 uResolution;
-                varying vec2 vTexCoord;
+            precision highp float;
+            uniform sampler2D uTexture;
+            uniform vec2 uResolution;
+            varying vec2 vTexCoord;
 
-                void main() {
-                    vec4 color = texture2D(uTexture, vTexCoord);
-                    float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-                    gl_FragColor = vec4(vec3(gray), 1.0);
-                }
-            `,
+            void main() {
+                vec4 color = texture2D(uTexture, vTexCoord);
+                float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+                gl_FragColor = vec4(vec3(gray), 1.0);
+            }
+        `,
             invert: `
-                precision highp float;
-                uniform sampler2D uTexture;
-                uniform vec2 uResolution;
-                varying vec2 vTexCoord;
+            precision highp float;
+            uniform sampler2D uTexture;
+            uniform vec2 uResolution;
+            varying vec2 vTexCoord;
 
-                void main() {
-                    vec4 color = texture2D(uTexture, vTexCoord);
-                    gl_FragColor = vec4(1.0 - color.rgb, color.a);
-                }
-            `,
+            void main() {
+                vec4 color = texture2D(uTexture, vTexCoord);
+                gl_FragColor = vec4(1.0 - color.rgb, color.a);
+            }
+        `,
             sepia: `
-                precision highp float;
-                uniform sampler2D uTexture;
-                uniform vec2 uResolution;
-                varying vec2 vTexCoord;
+            precision highp float;
+            uniform sampler2D uTexture;
+            uniform vec2 uResolution;
+            varying vec2 vTexCoord;
 
-                void main() {
-                    vec4 color = texture2D(uTexture, vTexCoord);
-                    float r = dot(color.rgb, vec3(0.393, 0.769, 0.189));
-                    float g = dot(color.rgb, vec3(0.349, 0.686, 0.168));
-                    float b = dot(color.rgb, vec3(0.272, 0.534, 0.131));
-                    gl_FragColor = vec4(r, g, b, color.a);
-                }
-            `,
+            void main() {
+                vec4 color = texture2D(uTexture, vTexCoord);
+                float r = dot(color.rgb, vec3(0.393, 0.769, 0.189));
+                float g = dot(color.rgb, vec3(0.349, 0.686, 0.168));
+                float b = dot(color.rgb, vec3(0.272, 0.534, 0.131));
+                gl_FragColor = vec4(r, g, b, color.a);
+            }
+        `,
             blur: `
-                precision highp float;
-                uniform sampler2D uTexture;
-                uniform vec2 uResolution;
-                varying vec2 vTexCoord;
+            precision highp float;
+            uniform sampler2D uTexture;
+            uniform vec2 uResolution;
+            varying vec2 vTexCoord;
 
-                void main() {
-                    vec2 texelSize = 1.0 / uResolution;
-                    vec4 color = vec4(0.0);
-                    float kernel[9];
-                    kernel[0] = 1.0/16.0; kernel[1] = 2.0/16.0; kernel[2] = 1.0/16.0;
-                    kernel[3] = 2.0/16.0; kernel[4] = 4.0/16.0; kernel[5] = 2.0/16.0;
-                    kernel[6] = 1.0/16.0; kernel[7] = 2.0/16.0; kernel[8] = 1.0/16.0;
-                    
-                    vec2 offsets[9];
-                    offsets[0] = vec2(-texelSize.x, -texelSize.y);
-                    offsets[1] = vec2(0.0, -texelSize.y);
-                    offsets[2] = vec2(texelSize.x, -texelSize.y);
-                    offsets[3] = vec2(-texelSize.x, 0.0);
-                    offsets[4] = vec2(0.0, 0.0);
-                    offsets[5] = vec2(texelSize.x, 0.0);
-                    offsets[6] = vec2(-texelSize.x, texelSize.y);
-                    offsets[7] = vec2(0.0, texelSize.y);
-                    offsets[8] = vec2(texelSize.x, texelSize.y);
+            void main() {
+                vec2 texelSize = 1.0 / uResolution;
+                vec4 color = vec4(0.0);
+                float kernel[9];
+                kernel[0] = 1.0/16.0; kernel[1] = 2.0/16.0; kernel[2] = 1.0/16.0;
+                kernel[3] = 2.0/16.0; kernel[4] = 4.0/16.0; kernel[5] = 2.0/16.0;
+                kernel[6] = 1.0/16.0; kernel[7] = 2.0/16.0; kernel[8] = 1.0/16.0;
+                
+                vec2 offsets[9];
+                offsets[0] = vec2(-texelSize.x, -texelSize.y);
+                offsets[1] = vec2(0.0, -texelSize.y);
+                offsets[2] = vec2(texelSize.x, -texelSize.y);
+                offsets[3] = vec2(-texelSize.x, 0.0);
+                offsets[4] = vec2(0.0, 0.0);
+                offsets[5] = vec2(texelSize.x, 0.0);
+                offsets[6] = vec2(-texelSize.x, texelSize.y);
+                offsets[7] = vec2(0.0, texelSize.y);
+                offsets[8] = vec2(texelSize.x, texelSize.y);
 
-                    for(int i = 0; i < 9; i++) {
-                        vec4 tmp = texture2D(uTexture, vTexCoord + offsets[i]);
-                        color += tmp * kernel[i];
-                    }
-
-                    gl_FragColor = color;
+                for(int i = 0; i < 9; i++) {
+                    vec4 tmp = texture2D(uTexture, vTexCoord + offsets[i]);
+                    color += tmp * kernel[i];
                 }
-            `
+
+                gl_FragColor = color;
+            }
+        `
         };
 
         function updateShader(type) {
@@ -1215,83 +1260,83 @@
 
         const videoShaders = {
             normal: `
-                precision highp float;
-                uniform sampler2D uTexture;
-                varying vec2 vTexCoord;
+            precision highp float;
+            uniform sampler2D uTexture;
+            varying vec2 vTexCoord;
 
-                void main() {
-                    gl_FragColor = texture2D(uTexture, vTexCoord);
-                }
-            `,
+            void main() {
+                gl_FragColor = texture2D(uTexture, vTexCoord);
+            }
+        `,
             wave: `
-                precision highp float;
-                uniform sampler2D uTexture;
-                uniform vec2 uResolution;
-                uniform float uTime;
-                varying vec2 vTexCoord;
+            precision highp float;
+            uniform sampler2D uTexture;
+            uniform vec2 uResolution;
+            uniform float uTime;
+            varying vec2 vTexCoord;
 
-                void main() {
-                    vec2 uv = vTexCoord;
-                    float wave = sin(uv.y * 10.0 + uTime) * 0.02;
-                    vec2 distortedUV = vec2(uv.x + wave, uv.y);
-                    gl_FragColor = texture2D(uTexture, distortedUV);
-                }
-            `,
+            void main() {
+                vec2 uv = vTexCoord;
+                float wave = sin(uv.y * 10.0 + uTime) * 0.02;
+                vec2 distortedUV = vec2(uv.x + wave, uv.y);
+                gl_FragColor = texture2D(uTexture, distortedUV);
+            }
+        `,
             pixelate: `
-                precision highp float;
-                uniform sampler2D uTexture;
-                uniform vec2 uResolution;
-                varying vec2 vTexCoord;
+            precision highp float;
+            uniform sampler2D uTexture;
+            uniform vec2 uResolution;
+            varying vec2 vTexCoord;
 
-                void main() {
-                    float pixels = 100.0;
-                    vec2 uv = vTexCoord;
-                    vec2 pixelated = floor(uv * pixels) / pixels;
-                    gl_FragColor = texture2D(uTexture, pixelated);
-                }
-            `,
+            void main() {
+                float pixels = 100.0;
+                vec2 uv = vTexCoord;
+                vec2 pixelated = floor(uv * pixels) / pixels;
+                gl_FragColor = texture2D(uTexture, pixelated);
+            }
+        `,
             colorCycle: `
-                precision highp float;
-                uniform sampler2D uTexture;
-                uniform float uTime;
-                varying vec2 vTexCoord;
+            precision highp float;
+            uniform sampler2D uTexture;
+            uniform float uTime;
+            varying vec2 vTexCoord;
 
-                void main() {
-                    vec4 texColor = texture2D(uTexture, vTexCoord);
-                    vec3 color = texColor.rgb;
-                    
-                    // Create a cycling color overlay
-                    vec3 colorShift = vec3(
-                        sin(uTime) * 0.5 + 0.5,
-                        sin(uTime + 2.094) * 0.5 + 0.5,
-                        sin(uTime + 4.189) * 0.5 + 0.5
-                    );
-                    
-                    // Mix the original color with the cycling color
-                    color *= colorShift;
-                    
-                    gl_FragColor = vec4(color, texColor.a);
-                }
-            `,
+            void main() {
+                vec4 texColor = texture2D(uTexture, vTexCoord);
+                vec3 color = texColor.rgb;
+                
+                // Create a cycling color overlay
+                vec3 colorShift = vec3(
+                    sin(uTime) * 0.5 + 0.5,
+                    sin(uTime + 2.094) * 0.5 + 0.5,
+                    sin(uTime + 4.189) * 0.5 + 0.5
+                );
+                
+                // Mix the original color with the cycling color
+                color *= colorShift;
+                
+                gl_FragColor = vec4(color, texColor.a);
+            }
+        `,
             edgeDetect: `
-                precision highp float;
-                uniform sampler2D uTexture;
-                uniform vec2 uResolution;
-                varying vec2 vTexCoord;
+            precision highp float;
+            uniform sampler2D uTexture;
+            uniform vec2 uResolution;
+            varying vec2 vTexCoord;
 
-                void main() {
-                    vec2 texel = 1.0 / uResolution;
-                    vec4 center = texture2D(uTexture, vTexCoord);
-                    vec4 up = texture2D(uTexture, vTexCoord + vec2(0.0, texel.y));
-                    vec4 down = texture2D(uTexture, vTexCoord + vec2(0.0, -texel.y));
-                    vec4 left = texture2D(uTexture, vTexCoord + vec2(-texel.x, 0.0));
-                    vec4 right = texture2D(uTexture, vTexCoord + vec2(texel.x, 0.0));
-                    
-                    vec4 edges = abs(center - up) + abs(center - down) + 
-                                abs(center - left) + abs(center - right);
-                    gl_FragColor = vec4(edges.rgb, 1.0);
-                }
-            `
+            void main() {
+                vec2 texel = 1.0 / uResolution;
+                vec4 center = texture2D(uTexture, vTexCoord);
+                vec4 up = texture2D(uTexture, vTexCoord + vec2(0.0, texel.y));
+                vec4 down = texture2D(uTexture, vTexCoord + vec2(0.0, -texel.y));
+                vec4 left = texture2D(uTexture, vTexCoord + vec2(-texel.x, 0.0));
+                vec4 right = texture2D(uTexture, vTexCoord + vec2(texel.x, 0.0));
+                
+                vec4 edges = abs(center - up) + abs(center - down) + 
+                            abs(center - left) + abs(center - right);
+                gl_FragColor = vec4(edges.rgb, 1.0);
+            }
+        `
         };
 
         let animationFrameId = null;
@@ -1345,8 +1390,9 @@
 
         function updateShaderGridImages(newSrc) {
             // Get all media-shader elements within the shader-grid
-            const shaderGrid = document.querySelector('.shader-grid');
+            const shaderGrid = document.querySelector('.shader-grid.image-grid');
             const shaderViewers = shaderGrid.querySelectorAll('media-shader');
+            console.log(newSrc, shaderViewers);
 
             // Update the src attribute for each media-shader
             shaderViewers.forEach(viewer => {
@@ -1354,10 +1400,96 @@
             });
         }
 
-        // Animation for the new animated shaders
+        function updateHalftoneUniforms() {
+            const viewer = document.getElementById('halftoneDemo');
+            if (!viewer) return;
+
+            const patternType = document.getElementById('patternType').value;
+            const bleedAmount = document.getElementById('bleedAmount').value;
+            const rotation = document.getElementById('patternRotation').value;
+            const size = document.getElementById('patternSize').value;
+            const colorMode = document.getElementById('colorMode').value;
+
+            const patternTypeMap = {
+                'dots': 0,
+                'waves': 1,
+                'squares': 2
+            };
+
+            const uniforms = {
+                uPatternType: patternTypeMap[patternType],
+                uBleed: parseFloat(bleedAmount) / 100.0,
+                uRotation: parseFloat(rotation),
+                uPatternSize: parseFloat(size),
+                uIsColorMode: colorMode === 'full',
+                uResolution: [viewer.clientWidth, viewer.clientHeight]
+            };
+
+            viewer.setAttribute('uniforms', JSON.stringify(uniforms));
+        }
+
+        // Initialize halftone uniforms after page load
         window.addEventListener('load', () => {
-            // Get all the animated shaders from the first shader grid
-            const animatedShaders = document.querySelector('.example:first-of-type .shader-grid').querySelectorAll('media-shader');
+            setTimeout(updateHalftoneUniforms, 100);
+        });
+
+        function updateHalftoneImage(newSrc) {
+            const viewer = document.getElementById('halftoneDemo');
+            if (viewer) {
+                viewer.setAttribute('src', newSrc);
+                // Update uniforms after image change to ensure proper rendering
+                updateHalftoneUniforms();
+            }
+        }
+
+        function updateAllImages(newSrc) {
+            // Update halftone demo
+            updateHalftoneImage(newSrc);
+
+            // Update shader grid images
+            updateShaderGridImages(newSrc);
+        }
+
+        // Update event listeners for image selectors
+        window.addEventListener('load', () => {
+            const imageSelectors = document.querySelectorAll('select[id$="imageSelect"]');
+            imageSelectors.forEach(selector => {
+                selector.onchange = (e) => updateAllImages(e.target.value);
+            });
+
+            // Initialize uniforms
+            setTimeout(updateHalftoneUniforms, 100);
+        });
+
+        function updateVideoUniforms() {
+            const viewer = document.getElementById('uniformVideoDemo');
+            if (!viewer) return;
+
+            const effectTypes = {
+                'ripple': 0,
+                'kaleidoscope': 1,
+                'pixelate': 2,
+                'colorize': 3
+            };
+
+            const uniforms = {
+                uIntensity: parseFloat(document.getElementById('effectIntensity').value) / 100.0,
+                uColorShift: parseFloat(document.getElementById('colorShift').value) / 100.0,
+                uDistortion: parseFloat(document.getElementById('distortionAmount').value) / 100.0,
+                uTimeSpeed: parseFloat(document.getElementById('timeSpeed').value) / 100.0,
+                uEffectType: effectTypes[document.getElementById('effectType').value]
+            };
+
+            viewer.setAttribute('uniforms', JSON.stringify(uniforms));
+
+            // Update the uniforms display
+            document.getElementById('currentVideoUniforms').textContent =
+                'Current uniforms:\n' + JSON.stringify(uniforms, null, 2);
+        }
+
+        // Initialize video uniforms after page load
+        window.addEventListener('load', () => {
+            setTimeout(updateVideoUniforms, 100);
         });
     </script>
 </body>

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+    <title>Media Dither Shader</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .uniforms-display {
+            background: #222;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+        canvas {
+            width: 100%;
+            max-width: 800px;
+            height: auto;
+        }
+    </style>
+    <link rel="stylesheet"
+          href="https://unpkg.com/@rogieking/figui3@latest/fig.css" />
+    <script src="https://unpkg.com/@rogieking/figui3@latest/fig.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <div class="controls">
+            <select id="mediaSelect">
+                <optgroup label="Images">
+                    <option value="https://picsum.photos/800/600">Random Image 1</option>
+                    <option value="https://picsum.photos/800/600?random=2">Random Image 2</option>
+                    <option value="https://picsum.photos/800/600?random=3">Random Image 3</option>
+                    <option value="https://picsum.photos/800/600?random=4">Random Image 4</option>
+                    <option value="https://picsum.photos/800/600?random=5">Random Image 5</option>
+                </optgroup>
+                <optgroup label="Videos">
+                    <option value="https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4">
+                        Big Buck Bunny</option>
+                    <option value="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4">
+                        For Bigger Blazes</option>
+                    <option value="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4">
+                        For Bigger Escapes</option>
+                    <option value="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4">
+                        For Bigger Fun</option>
+                    <option value="https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4">
+                        For Bigger Joyrides</option>
+                </optgroup>
+            </select>
+
+            <select id="ditherAlgorithm">
+                <option value="bayer">Bayer Dithering</option>
+                <option value="floyd-steinberg">Floyd-Steinberg</option>
+                <option value="atkinson">Atkinson</option>
+                <option value="stucki">Stucki</option>
+                <option value="jarvis">Jarvis</option>
+            </select>
+
+            <div>
+                <label for="scale">Scale:</label>
+                <fig-slider id="scale"
+                            min="0"
+                            step="0.01"
+                            max="1">
+            </div>
+
+            <div>
+                <label for="precision">Precision:</label>
+                <fig-slider id="precision"
+                            min="0"
+                            step="0.01"
+                            max="1">
+            </div>
+        </div>
+
+        <media-shader width="100%"
+                      height="400"
+                      loading="eager"
+                      fragment-shader=""></media-shader>
+
+        <div class="uniforms-display">
+            <h3>Current Uniforms:</h3>
+            <pre id="uniformsDisplay"></pre>
+        </div>
+    </div>
+
+    <script src="./media-shader.js"></script>
+    <script type="module">
+        const ditherShaders = {
+            bayer: `
+                precision highp float;
+                uniform sampler2D uTexture;
+                uniform vec2 uResolution;
+                uniform float uTime;
+                uniform vec4 uMouse;
+                uniform bool uHasTexture;
+                uniform float uScale;
+                uniform float uThreshold;
+                varying vec2 vTexCoord;
+
+                float decimate(float v, float p){ return floor(v*p)/p; }
+                vec2 decimate(vec2 v, float p){ return floor(v*p)/p; }
+                vec2 decimate(vec2 v, vec2 p){ return floor(v*p)/p; }
+                vec3 decimate(vec3 v, float p){ return floor(v*p)/p; }
+                vec3 decimate(vec3 v, vec3 p){ return floor(v*p)/p; }
+                vec4 decimate(vec4 v, float p){ return floor(v*p)/p; }
+                vec4 decimate(vec4 v, vec4 p){ return floor(v*p)/p; }
+
+                vec2 nearest(in vec2 v, in vec2 res) {
+                    vec2 offset = 0.5 / (res - 1.0);
+                    return floor(v * res) / res + offset;
+                }
+
+                vec4 sampleNearest(sampler2D tex, vec2 st, vec2 texResolution) {
+                    return texture2D( tex, nearest(st, texResolution) );
+                }
+
+                float ditherBayer(const in vec2 xy) {
+                    float x = mod(xy.x, 8.0);
+                    float y = mod(xy.y, 8.0);
+                    return  mix(mix(mix(mix(mix(mix(0.0,32.0,step(1.0,y)),mix(8.0,40.0,step(3.0,y)),step(2.0,y)),mix(mix(2.0,34.0,step(5.0,y)),mix(10.0,42.0,step(7.0,y)),step(6.0,y)),step(4.0,y)),mix(mix(mix(48.0,16.0,step(1.0,y)),mix(56.0,24.0,step(3.0,y)),step(2.0,y)),mix(mix(50.0,18.0,step(5.0,y)),mix(58.0,26.0,step(7.0,y)),step(6.0,y)),step(4.0,y)),step(1.0,x)),mix(mix(mix(mix(12.0,44.0,step(1.0,y)),mix(4.0,36.0,step(3.0,y)),step(2.0,y)),mix(mix(14.0,46.0,step(5.0,y)),mix(6.0,38.0,step(7.0,y)),step(6.0,y)),step(4.0,y)),mix(mix(mix(60.0,28.0,step(1.0,y)),mix(52.0,20.0,step(3.0,y)),step(2.0,y)),mix(mix(62.0,30.0,step(5.0,y)),mix(54.0,22.0,step(7.0,y)),step(6.0,y)),step(4.0,y)),step(3.0,x)),step(2.0,x)),mix(mix(mix(mix(mix(3.0,35.0,step(1.0,y)),mix(11.0,43.0,step(3.0,y)),step(2.0,y)),mix(mix(1.0,33.0,step(5.0,y)),mix(9.0,41.0,step(7.0,y)),step(6.0,y)),step(4.0,y)),mix(mix(mix(51.0,19.0,step(1.0,y)),mix(59.0,27.0,step(3.0,y)),step(2.0,y)),mix(mix(49.0,17.0,step(5.0,y)),mix(57.0,25.0,step(7.0,y)),step(6.0,y)),step(4.0,y)),step(5.0,x)),mix(mix(mix(mix(15.0,47.0,step(1.0,y)),mix(7.0,39.0,step(3.0,y)),step(2.0,y)),mix(mix(13.0,45.0,step(5.0,y)),mix(5.0,37.0,step(7.0,y)),step(6.0,y)),step(4.0,y)),mix(mix(mix(63.0,31.0,step(1.0,y)),mix(55.0,23.0,step(3.0,y)),step(2.0,y)),mix(mix(61.0,29.0,step(5.0,y)),mix(53.0,21.0,step(7.0,y)),step(6.0,y)),step(4.0,y)),step(7.0,x)),step(6.0,x)),step(4.0,x)) / (64.0);
+                }
+
+                vec3 ditherBayer(vec3 color, const in vec2 xy, const int pres) {
+                    float d = float(pres);
+                    vec3 decimated = decimate(color, d);
+                    vec3 diff = (color - decimated) * d;
+                    vec3 ditherPattern = vec3(ditherBayer(xy));
+                    return decimate(color + (step(ditherPattern, diff) / d), d);
+                }
+
+                vec4 ditherBayer(const in vec4 color, const in vec2 xy, const int pres) {  
+                    return vec4(ditherBayer(color.rgb, xy, pres), color.a); 
+                }  
+
+                void main() {
+                    if (!uHasTexture) {
+                        gl_FragColor = vec4(0.0);
+                        return;
+                    }
+
+                    vec2 uv = vTexCoord;
+
+                    vec2 ditherResolution = uResolution * (1.0 - uScale);
+                    vec4 color = sampleNearest(uTexture, uv, ditherResolution);
+
+                    color = ditherBayer(color, uv * ditherResolution, int(mix(2.0, 8.0, uThreshold)));
+                    
+                    gl_FragColor = color;
+                }
+            `,
+            'floyd-steinberg': `
+                precision highp float;
+                uniform sampler2D uTexture;
+                uniform vec2 uResolution;
+                uniform float uTime;
+                uniform vec4 uMouse;
+                uniform bool uHasTexture;
+                uniform float uScale;
+                uniform float uPrecision;
+                varying vec2 vTexCoord;
+
+                void main() {
+                    if (!uHasTexture) {
+                        gl_FragColor = vec4(0.0);
+                        return;
+                    }
+
+                    vec2 uv = vTexCoord;
+                    vec2 pixelated = floor(uv * uResolution / max(uScale * 10.0, 1.0));
+                    vec2 pixelSize = 1.0 / (uResolution / max(uScale * 10.0, 1.0));
+                    
+                    vec4 color = texture2D(uTexture, uv);
+                    float luminance = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+                    
+                    float steps = max(floor(uPrecision * 8.0), 2.0);
+                    float quantized = floor(luminance * steps) / steps;
+                    float error = luminance - quantized;
+                    
+                    // Floyd-Steinberg error diffusion
+                    vec2 right = vec2(pixelSize.x, 0.0);
+                    vec2 downLeft = vec2(-pixelSize.x, pixelSize.y);
+                    vec2 down = vec2(0.0, pixelSize.y);
+                    vec2 downRight = vec2(pixelSize.x, pixelSize.y);
+                    
+                    float finalValue = quantized;
+                    finalValue += error * 7.0/16.0 * texture2D(uTexture, uv + right).a;
+                    finalValue += error * 3.0/16.0 * texture2D(uTexture, uv + downLeft).a;
+                    finalValue += error * 5.0/16.0 * texture2D(uTexture, uv + down).a;
+                    finalValue += error * 1.0/16.0 * texture2D(uTexture, uv + downRight).a;
+                    
+                    vec3 finalColor = vec3(step(0.5, finalValue));
+                    gl_FragColor = vec4(finalColor, 1.0);
+                }
+            `,
+            atkinson: `
+                precision highp float;
+                uniform sampler2D uTexture;
+                uniform vec2 uResolution;
+                uniform float uTime;
+                uniform vec4 uMouse;
+                uniform bool uHasTexture;
+                uniform float uScale;
+                uniform float uPrecision;
+                varying vec2 vTexCoord;
+
+                void main() {
+                    if (!uHasTexture) {
+                        gl_FragColor = vec4(0.0);
+                        return;
+                    }
+
+                    vec2 uv = vTexCoord;
+                    vec2 pixelated = floor(uv * uResolution / max(uScale * 10.0, 1.0));
+                    vec2 pixelSize = 1.0 / (uResolution / max(uScale * 10.0, 1.0));
+                    
+                    vec4 color = texture2D(uTexture, uv);
+                    float luminance = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+                    
+                    float steps = max(floor(uPrecision * 8.0), 2.0);
+                    float quantized = floor(luminance * steps) / steps;
+                    float error = luminance - quantized;
+                    
+                    // Atkinson error diffusion
+                    vec2 right = vec2(pixelSize.x, 0.0);
+                    vec2 right2 = vec2(pixelSize.x * 2.0, 0.0);
+                    vec2 downLeft = vec2(-pixelSize.x, pixelSize.y);
+                    vec2 downLeft2 = vec2(-pixelSize.x * 2.0, pixelSize.y);
+                    vec2 down = vec2(0.0, pixelSize.y);
+                    vec2 downRight = vec2(pixelSize.x, pixelSize.y);
+                    vec2 downRight2 = vec2(pixelSize.x * 2.0, pixelSize.y);
+                    
+                    float finalValue = quantized;
+                    finalValue += error * 1.0/8.0 * texture2D(uTexture, uv + right).a;
+                    finalValue += error * 1.0/8.0 * texture2D(uTexture, uv + right2).a;
+                    finalValue += error * 1.0/8.0 * texture2D(uTexture, uv + downLeft).a;
+                    finalValue += error * 1.0/8.0 * texture2D(uTexture, uv + downLeft2).a;
+                    finalValue += error * 1.0/8.0 * texture2D(uTexture, uv + down).a;
+                    finalValue += error * 1.0/8.0 * texture2D(uTexture, uv + downRight).a;
+                    finalValue += error * 1.0/8.0 * texture2D(uTexture, uv + downRight2).a;
+                    
+                    vec3 finalColor = vec3(step(0.5, finalValue));
+                    gl_FragColor = vec4(finalColor, 1.0);
+                }
+            `,
+            stucki: `
+                precision highp float;
+                uniform sampler2D uTexture;
+                uniform vec2 uResolution;
+                uniform float uTime;
+                uniform vec4 uMouse;
+                uniform bool uHasTexture;
+                uniform float uScale;
+                uniform float uPrecision;
+                varying vec2 vTexCoord;
+
+                void main() {
+                    if (!uHasTexture) {
+                        gl_FragColor = vec4(0.0);
+                        return;
+                    }
+
+                    vec2 uv = vTexCoord;
+                    vec2 pixelated = floor(uv * uResolution / max(uScale * 10.0, 1.0));
+                    vec2 pixelSize = 1.0 / (uResolution / max(uScale * 10.0, 1.0));
+                    
+                    vec4 color = texture2D(uTexture, uv);
+                    float luminance = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+                    
+                    float steps = max(floor(uPrecision * 8.0), 2.0);
+                    float quantized = floor(luminance * steps) / steps;
+                    float error = luminance - quantized;
+                    
+                    // Stucki error diffusion
+                    vec2 right = vec2(pixelSize.x, 0.0);
+                    vec2 right2 = vec2(pixelSize.x * 2.0, 0.0);
+                    vec2 downLeft = vec2(-pixelSize.x, pixelSize.y);
+                    vec2 downLeft2 = vec2(-pixelSize.x * 2.0, pixelSize.y);
+                    vec2 down = vec2(0.0, pixelSize.y);
+                    vec2 downRight = vec2(pixelSize.x, pixelSize.y);
+                    vec2 downRight2 = vec2(pixelSize.x * 2.0, pixelSize.y);
+                    
+                    float finalValue = quantized;
+                    finalValue += error * 8.0/42.0 * texture2D(uTexture, uv + right).a;
+                    finalValue += error * 4.0/42.0 * texture2D(uTexture, uv + right2).a;
+                    finalValue += error * 2.0/42.0 * texture2D(uTexture, uv + downLeft2).a;
+                    finalValue += error * 4.0/42.0 * texture2D(uTexture, uv + downLeft).a;
+                    finalValue += error * 8.0/42.0 * texture2D(uTexture, uv + down).a;
+                    finalValue += error * 4.0/42.0 * texture2D(uTexture, uv + downRight).a;
+                    finalValue += error * 2.0/42.0 * texture2D(uTexture, uv + downRight2).a;
+                    
+                    vec3 finalColor = vec3(step(0.5, finalValue));
+                    gl_FragColor = vec4(finalColor, 1.0);
+                }
+            `,
+            jarvis: `
+                precision highp float;
+                uniform sampler2D uTexture;
+                uniform vec2 uResolution;
+                uniform float uTime;
+                uniform vec4 uMouse;
+                uniform bool uHasTexture;
+                uniform float uScale;
+                uniform float uPrecision;
+                varying vec2 vTexCoord;
+
+                void main() {
+                    if (!uHasTexture) {
+                        gl_FragColor = vec4(0.0);
+                        return;
+                    }
+
+                    vec2 uv = vTexCoord;
+                    vec2 pixelated = floor(uv * uResolution / max(uScale * 10.0, 1.0));
+                    vec2 pixelSize = 1.0 / (uResolution / max(uScale * 10.0, 1.0));
+                    
+                    vec4 color = texture2D(uTexture, uv);
+                    float luminance = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+                    
+                    float steps = max(floor(uPrecision * 8.0), 2.0);
+                    float quantized = floor(luminance * steps) / steps;
+                    float error = luminance - quantized;
+                    
+                    // Jarvis error diffusion
+                    vec2 right = vec2(pixelSize.x, 0.0);
+                    vec2 right2 = vec2(pixelSize.x * 2.0, 0.0);
+                    vec2 downLeft = vec2(-pixelSize.x, pixelSize.y);
+                    vec2 downLeft2 = vec2(-pixelSize.x * 2.0, pixelSize.y);
+                    vec2 down = vec2(0.0, pixelSize.y);
+                    vec2 downRight = vec2(pixelSize.x, pixelSize.y);
+                    vec2 downRight2 = vec2(pixelSize.x * 2.0, pixelSize.y);
+                    
+                    float finalValue = quantized;
+                    finalValue += error * 7.0/48.0 * texture2D(uTexture, uv + right).a;
+                    finalValue += error * 5.0/48.0 * texture2D(uTexture, uv + right2).a;
+                    finalValue += error * 3.0/48.0 * texture2D(uTexture, uv + downLeft2).a;
+                    finalValue += error * 5.0/48.0 * texture2D(uTexture, uv + downLeft).a;
+                    finalValue += error * 7.0/48.0 * texture2D(uTexture, uv + down).a;
+                    finalValue += error * 5.0/48.0 * texture2D(uTexture, uv + downRight).a;
+                    finalValue += error * 3.0/48.0 * texture2D(uTexture, uv + downRight2).a;
+                    
+                    vec3 finalColor = vec3(step(0.5, finalValue));
+                    gl_FragColor = vec4(finalColor, 1.0);
+                }
+            `
+        };
+
+        const mediaSelect = document.getElementById('mediaSelect');
+        const ditherAlgorithm = document.getElementById('ditherAlgorithm');
+        const scaleInput = document.getElementById('scale');
+        const precisionInput = document.getElementById('precision');
+        const uniformsDisplay = document.getElementById('uniformsDisplay');
+        const mediaShader = document.querySelector('media-shader');
+
+        function updateUniforms() {
+            const uniforms = {
+                uScale: parseFloat(scaleInput.value),
+                uThreshold: parseFloat(precisionInput.value)
+            };
+
+            if (mediaShader) {
+                mediaShader.uniforms = uniforms;
+                mediaShader.fragmentShader = ditherShaders[ditherAlgorithm.value];
+                uniformsDisplay.textContent = JSON.stringify(uniforms, null, 2);
+            }
+        }
+
+        mediaSelect.addEventListener('change', async (e) => {
+            const url = e.target.value;
+            if (mediaShader) {
+                mediaShader.src = url;
+            }
+        });
+
+        mediaShader.src = mediaSelect.value;
+
+        ditherAlgorithm.addEventListener('change', updateUniforms);
+        scaleInput.addEventListener('input', updateUniforms);
+        precisionInput.addEventListener('input', updateUniforms);
+
+        window.addEventListener('load', () => {
+            setTimeout(updateUniforms, 100);
+        });
+    </script>
+</body>
+
+</html>

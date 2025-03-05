@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+    <title>MediaShader Image Examples</title>
+    <script src="media-shader.js"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .example {
+            margin: 30px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1,
+        h2 {
+            color: #333;
+        }
+
+        media-shader {
+
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>MediaShader Image Examples</h1>
+
+    <div class="example">
+        <h2>Basic Image Display (No Fragment Shader)</h2>
+        <p>This example shows an image displayed without any shader effects:</p>
+        <media-shader width="30vw"
+                      src="https://picsum.photos/640/360">
+        </media-shader>
+    </div>
+
+    <div class="example">
+        <h2>Image with Fragment Shader Effect</h2>
+        <p>This example applies a cool wave distortion effect to the image:</p>
+        <media-shader src="https://picsum.photos/640/360"
+                      fragment-shader="precision highp float;
+                uniform sampler2D uTexture;
+                uniform vec2 uResolution;
+                uniform float uTime;
+                varying vec2 vTexCoord;
+
+                void main() {
+                    vec2 uv = vTexCoord;
+                    float wave = sin(uv.y * 10.0 + uTime) * 0.02;
+                    vec2 distortedUV = vec2(uv.x + wave, uv.y);
+                    gl_FragColor = texture2D(uTexture, distortedUV);
+                }">
+        </media-shader>
+    </div>
+
+    <div class="example">
+        <h2>Image with Fragment Shader Effect</h2>
+        <p>This example applies a cool wave distortion effect to the image:</p>
+        <media-shader width="50%"
+                      src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                      loading="eager">
+        </media-shader>
+        <media-shader width="50%"
+                      src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                      loading="eager">
+        </media-shader>
+    </div>
+
+
+</body>
+
+</html>
