@@ -1,6 +1,6 @@
 {
   "name": "media-shader",
-  "version": "1.0.2",
+  "version": "1.0.9",
   "description": "A web component for applying WebGL shader effects to images and videos",
   "main": "media-shader.js",
   "type": "module",

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+    <title>Multi-Pass Shader Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .shader-examples {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .example {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+        }
+
+        .example h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+
+        media-shader {
+            display: block;
+            max-width: 100%;
+            margin: 10px 0;
+        }
+
+        .controls {
+            margin: 10px 0;
+        }
+
+        .controls button {
+            margin-right: 10px;
+            padding: 5px 10px;
+            border: none;
+            background: #007bff;
+            color: white;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .controls button:hover {
+            background: #0056b3;
+        }
+
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+            border: 1px solid #e9ecef;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Multi-Pass Shader Examples</h1>
+        <p>This page demonstrates the new multi-pass shader functionality of the MediaShader web component. Use arrays
+            for multi-pass shaders, single values for single-pass shaders.</p>
+
+        <div class="shader-examples">
+
+            <!-- Single Pass Example for comparison -->
+            <div class="example">
+                <h3>Single Pass (Original)</h3>
+                <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader="
+                        precision highp float;
+                        uniform sampler2D uTexture;
+                        uniform vec2 uResolution;
+                        varying vec2 vTexCoord;
+                        
+                        void main() {
+                            vec4 color = texture2D(uTexture, vTexCoord);
+                            float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+                            gl_FragColor = vec4(vec3(gray), 1.0);
+                        }
+                    ">
+                </media-shader>
+                <p>Single-pass grayscale conversion</p>
+            </div>
+
+            <!-- Multi-Pass Example: Blur + Enhance -->
+            <div class="example">
+                <h3>Multi-Pass: Blur + Enhance</h3>
+                <media-shader id="blurEnhance"
+                              src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader='[
+                        "precision highp float; uniform sampler2D uTexture; uniform vec2 uResolution; varying vec2 vTexCoord; void main() { vec2 texelSize = 1.0 / uResolution; vec4 color = vec4(0.0); for(int x = -1; x <= 1; x++) { for(int y = -1; y <= 1; y++) { color += texture2D(uTexture, vTexCoord + vec2(float(x), float(y)) * texelSize); } } gl_FragColor = color / 9.0; }",
+                        "precision highp float; uniform sampler2D uTexture; uniform float uIntensity; varying vec2 vTexCoord; void main() { vec4 color = texture2D(uTexture, vTexCoord); vec3 enhanced = color.rgb * uIntensity; gl_FragColor = vec4(enhanced, 1.0); }"
+                    ]'
+                              uniforms='[{}, {"uIntensity": 1.5}]'>
+                </media-shader>
+                <p>First pass: Blur, Second pass: Enhance brightness</p>
+            </div>
+
+            <!-- Multi-Pass Example: Edge Detection + Colorize -->
+            <div class="example">
+                <h3>Multi-Pass: Edge + Colorize</h3>
+                <media-shader id="edgeColorize"
+                              src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader='[
+                        "precision highp float; uniform sampler2D uTexture; uniform vec2 uResolution; varying vec2 vTexCoord; void main() { vec2 texel = 1.0 / uResolution; vec4 center = texture2D(uTexture, vTexCoord); vec4 up = texture2D(uTexture, vTexCoord + vec2(0.0, texel.y)); vec4 down = texture2D(uTexture, vTexCoord + vec2(0.0, -texel.y)); vec4 left = texture2D(uTexture, vTexCoord + vec2(-texel.x, 0.0)); vec4 right = texture2D(uTexture, vTexCoord + vec2(texel.x, 0.0)); vec4 edges = abs(center - up) + abs(center - down) + abs(center - left) + abs(center - right); gl_FragColor = vec4(edges.rgb, 1.0); }",
+                        "precision highp float; uniform sampler2D uTexture; uniform vec3 uColor; varying vec2 vTexCoord; void main() { vec4 edges = texture2D(uTexture, vTexCoord); float intensity = dot(edges.rgb, vec3(0.333)); gl_FragColor = vec4(uColor * intensity, 1.0); }"
+                    ]'
+                              uniforms='[{}, {"uColor": [0.2, 0.8, 1.0]}]'>
+                </media-shader>
+                <p>First pass: Edge detection, Second pass: Colorize edges</p>
+            </div>
+
+            <!-- Multi-Pass Example: Grayscale + Posterize + Tint -->
+            <div class="example">
+                <h3>Multi-Pass: Grayscale + Posterize + Tint</h3>
+                <media-shader id="threePasses"
+                              src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader='[
+                        "precision highp float; uniform sampler2D uTexture; varying vec2 vTexCoord; void main() { vec4 color = texture2D(uTexture, vTexCoord); float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114)); gl_FragColor = vec4(vec3(gray), 1.0); }",
+                        "precision highp float; uniform sampler2D uTexture; uniform float uLevels; varying vec2 vTexCoord; void main() { vec4 color = texture2D(uTexture, vTexCoord); vec3 posterized = floor(color.rgb * uLevels) / uLevels; gl_FragColor = vec4(posterized, 1.0); }",
+                        "precision highp float; uniform sampler2D uTexture; uniform vec3 uTint; varying vec2 vTexCoord; void main() { vec4 color = texture2D(uTexture, vTexCoord); vec3 tinted = color.rgb * uTint; gl_FragColor = vec4(tinted, 1.0); }"
+                    ]'
+                              uniforms='[{}, {"uLevels": 6.0}, {"uTint": [1.0, 0.8, 0.6]}]'>
+                </media-shader>
+                <p>Three passes: Grayscale → Posterize → Sepia tint</p>
+            </div>
+
+            <!-- Animated Multi-Pass Example -->
+            <div class="example">
+                <h3>Animated Multi-Pass</h3>
+                <media-shader id="animated"
+                              src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
+                              width="300"
+                              height="200"
+                              fragment-shader='[
+                        "precision highp float; uniform sampler2D uTexture; uniform vec2 uResolution; uniform float uTime; varying vec2 vTexCoord; void main() { vec2 uv = vTexCoord + sin(uTime + vTexCoord.y * 10.0) * 0.01; gl_FragColor = texture2D(uTexture, uv); }",
+                        "precision highp float; uniform sampler2D uTexture; uniform float uTime; varying vec2 vTexCoord; void main() { vec4 color = texture2D(uTexture, vTexCoord); float pulse = sin(uTime * 2.0) * 0.5 + 0.5; vec3 enhanced = color.rgb * (1.0 + pulse * 0.5); gl_FragColor = vec4(enhanced, 1.0); }"
+                    ]'
+                              uniforms='[{}, {}]'>
+                </media-shader>
+                <p>First pass: Wave distortion, Second pass: Animated brightness pulse</p>
+            </div>
+
+            <!-- No Media Multi-Pass Example -->
+            <div class="example">
+                <h3>Procedural Multi-Pass</h3>
+                <media-shader id="procedural"
+                              width="300"
+                              height="200"
+                              fragment-shader='[
+                        "precision highp float; uniform vec2 uResolution; uniform float uTime; varying vec2 vTexCoord; void main() { vec2 uv = vTexCoord * 2.0 - 1.0; uv.x *= uResolution.x / uResolution.y; float d = length(uv); float rings = sin(d * 10.0 - uTime * 3.0) * 0.5 + 0.5; gl_FragColor = vec4(vec3(rings), 1.0); }",
+                        "precision highp float; uniform sampler2D uTexture; uniform float uTime; varying vec2 vTexCoord; void main() { vec4 color = texture2D(uTexture, vTexCoord); float intensity = color.r; vec3 rainbow = vec3(sin(uTime + intensity * 6.28), sin(uTime + intensity * 6.28 + 2.094), sin(uTime + intensity * 6.28 + 4.189)) * 0.5 + 0.5; gl_FragColor = vec4(rainbow * intensity, 1.0); }"
+                    ]'
+                              uniforms='[{}, {}]'>
+                </media-shader>
+                <p>First pass: Procedural rings, Second pass: Rainbow colorization</p>
+            </div>
+            <!-- No Media Multi-Pass Example -->
+            <div class="example">
+                <h3>Procedural Multi-Pass</h3>
+                <media-shader id="procedural"
+                              width="100%"
+                              height="300px"
+                              uniforms='[{"u_background":[0,0,0,1],"u_color":[0,1,0,1],"u_scale":0.66,"u_speed":0.5,"u_phase":0.5,"u_brightness":1.00001,"u_resolution":[1024,1024]},{"uScale":0.8,"uThreshold":0.5}]'
+                              fragment-shader='["precision highp float;\n                                      \n                        uniform vec2 u_resolution;\n                                    uniform vec4 u_background;\n                                    uniform vec4 u_color;\n                                    uniform float u_speed;//units:%\n                                    uniform float u_phase;//units:%\n                                    uniform float u_scale;//units:%\n                                    uniform float u_brightness;//units:%\n                                    uniform float uTime;\n                                    uniform vec4 uMouse;\n\n                                    float u_time = uTime;\n\n\n                                    vec2 rotate(vec2 uv, float th) {\n                                          return mat2(cos(th), sin(th), -sin(th), cos(th)) * uv;\n                                    }\n                        \n                        float neuro_shape(vec2 uv, float t) {\n                                          vec2 sine_acc = vec2(0.);\n                                          vec2 res = vec2(0.);\n                                          float scale = 8.;\n\n                                          for(int j = 0; j < 15; j++) {\n                                                uv = rotate(uv, 1.);\n                                                sine_acc = rotate(sine_acc, 1.);\n                                                vec2 layer = uv * scale + float(j) + sine_acc - t;\n                                                sine_acc += sin(layer);\n                            res += (.5 + .5 * cos(layer)) / scale;\n                                    scale *= (1.2);\n                          }\n                          return res.x + res.y;\n                        }\n\n                              void main() {\n                          \n\n                          vec2 uv = gl_FragCoord.xy / u_resolution.xy;\n\n                                    uv -= .5;\n                          float scale = .75 * u_scale + 1e-4;\n                                    uv *= (.001 * (1. - step(1. - scale, 1.) / scale));\n                                    uv *= u_resolution;\n                                    uv += .5;\n                        \n                          float t = u_time * u_speed + u_phase * 10.;\n                        \n                          float noise = neuro_shape(uv, t);\n\n                                    noise = u_brightness * pow(noise, 3.);\n                                    noise += pow(noise, 12.);\n                                    noise = max(.0, noise - .5);\n                        \n                          vec3 color = mix(u_background.rgb * u_background.a, u_color.rgb * u_color.a, noise);\n                          float opacity = mix(u_background.a, u_color.a, noise);\n\n                                    gl_FragColor = vec4(color, opacity);\n                              }","precision highp float;varying vec2 vTexCoord; uniform sampler2D uTexture; void main(){vec4 color = texture2D(uTexture,vTexCoord); color.g = 0.5; gl_FragColor = color;}"]'>
+                </media-shader>
+                <p>First pass: Procedural rings, Second pass: Rainbow colorization</p>
+            </div>
+
+        </div>
+
+        <div class="controls">
+            <button onclick="toggleAnimation()">Toggle Animation</button>
+            <button onclick="changeIntensity()">Change Intensity</button>
+            <button onclick="resetAll()">Reset All</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>API Usage Examples</h2>
+
+        <h3>Multi-Pass Shaders</h3>
+        <pre>
+&lt;media-shader 
+    src="image.jpg"
+    fragment-shader='[
+        "shader1_code_here",
+        "shader2_code_here",
+        "shader3_code_here"
+    ]'
+    uniforms='[
+        {"uniform1": value1},
+        {"uniform2": value2},
+        {"uniform3": value3}
+    ]'&gt;
+&lt;/media-shader&gt;
+        </pre>
+
+        <h3>JavaScript API</h3>
+        <pre>
+// Set multiple shaders (array for multi-pass)
+mediaShader.fragmentShader = [
+    "precision highp float; uniform sampler2D uTexture; varying vec2 vTexCoord; void main() { gl_FragColor = texture2D(uTexture, vTexCoord); }",
+    "precision highp float; uniform sampler2D uTexture; varying vec2 vTexCoord; void main() { vec4 color = texture2D(uTexture, vTexCoord); gl_FragColor = vec4(1.0 - color.rgb, 1.0); }"
+];
+
+// Set per-pass uniforms (array for multi-pass)
+mediaShader.uniforms = [
+    {"uIntensity": 1.0},
+    {"uTint": [1.0, 0.8, 0.6]}
+];
+
+// Or set as JSON strings
+mediaShader.setAttribute('fragment-shader', JSON.stringify(shaders));
+mediaShader.setAttribute('uniforms', JSON.stringify(uniforms));
+        </pre>
+
+        <h3>Single-Pass Shaders</h3>
+        <p>For single-pass shaders, use strings instead of arrays:</p>
+        <pre>
+&lt;media-shader 
+    src="image.jpg"
+    fragment-shader="single_shader_code"
+    uniforms='{"uniform1": value1}'&gt;
+&lt;/media-shader&gt;
+        </pre>
+
+        <h3>Automatic Detection</h3>
+        <p>The component automatically detects whether to use single-pass or multi-pass rendering:</p>
+        <ul>
+            <li><strong>String values:</strong> Single-pass rendering</li>
+            <li><strong>Array values:</strong> Multi-pass rendering</li>
+        </ul>
+    </div>
+
+    <script src="./media-shader.js"></script>
+    <script>
+        let animationEnabled = true;
+        let currentIntensity = 1.5;
+
+        function toggleAnimation() {
+            animationEnabled = !animationEnabled;
+            const animatedShader = document.getElementById('animated');
+            if (animationEnabled) {
+                animatedShader.style.display = 'block';
+            } else {
+                animatedShader.style.display = 'none';
+            }
+        }
+
+        function changeIntensity() {
+            currentIntensity = currentIntensity === 1.5 ? 2.5 : 1.5;
+            const blurEnhance = document.getElementById('blurEnhance');
+            blurEnhance.uniforms = [{}, { "uIntensity": currentIntensity }];
+        }
+
+        function resetAll() {
+            location.reload();
+        }
+
+        // Log multi-pass shader info
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const multiPassShaders = document.querySelectorAll('media-shader');
+                const multiPassCount = Array.from(multiPassShaders).filter(shader => {
+                    try {
+                        return Array.isArray(JSON.parse(shader.getAttribute('fragment-shader')));
+                    } catch (e) {
+                        return false;
+                    }
+                }).length;
+
+                console.log(`Found ${multiPassCount} multi-pass shaders out of ${multiPassShaders.length} total`);
+
+                multiPassShaders.forEach((shader, index) => {
+                    const fragmentShader = shader.getAttribute('fragment-shader');
+                    try {
+                        const parsed = JSON.parse(fragmentShader);
+                        if (Array.isArray(parsed)) {
+                            console.log(`Multi-pass shader ${index + 1}:`, {
+                                passes: parsed.length,
+                                uniforms: shader.getAttribute('uniforms')
+                            });
+                        }
+                    } catch (e) {
+                        // Single-pass shader, skip
+                    }
+                });
+            }, 1000);
+        });
+    </script>
+</body>
+
+</html>

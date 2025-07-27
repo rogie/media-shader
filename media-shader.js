@@ -6,15 +6,39 @@
  * @extends HTMLElement
  *
  * @property {string} src - URL of the image or video to display
- * @property {string} fragmentShader - GLSL fragment shader code to apply
+ * @property {string|string[]} fragmentShader - GLSL fragment shader code (string for single-pass, array for multi-pass)
  * @property {string} width - Width of the canvas in pixels
  * @property {string} height - Height of the canvas in pixels
- * @property {string} uniforms - JSON string of uniform values to pass to the shader
+ * @property {string|string[]} uniforms - Uniform values (object for single-pass, array of objects for multi-pass)
  * @property {boolean} playing - Controls video playback when the media is a video
  * @property {string} alt - Alternative text for accessibility
  * @property {string} loading - Loading mode ('eager' or 'lazy')
  */
 class MediaShader extends HTMLElement {
+  // Private fields
+  #width = 300;
+  #height = 150;
+  #naturalWidth = null;
+  #naturalHeight = null;
+  #playing = false;
+  #isLoaded = false;
+  #intersectionObserver = null;
+  #uniforms = {};
+  #passUniforms = []; // Per-pass uniforms
+  #uniformLocations = new Map();
+  #passUniformLocations = []; // Per-pass uniform locations
+  #hasTexture = false;
+  #startTime = performance.now();
+  #mouseData = new Float32Array(4);
+  #isMouseDown = false;
+  #framebuffers = [];
+  #framebufferTextures = [];
+  #isMultiPass = false;
+  #fragmentShaders = [];
+  #resizeObserver;
+  #buffers = null;
+  #videoFrameCallback = null;
+
   /**
    * Creates a new ShaderViewer instance and initializes the WebGL context.
    */
@@ -48,72 +72,57 @@ class MediaShader extends HTMLElement {
     this.gl = null;
     this.mediaElement = null;
     this.texture = null;
-    this.program = null;
+    this.program = null; // For backward compatibility (single-pass)
+    this.programs = []; // For multi-pass support
     this.animationFrame = null;
-    this._width = 300;
-    this._height = 150;
-    this._naturalWidth = null;
-    this._naturalHeight = null;
-    this._playing = false;
-    this._isLoaded = false;
-    this._intersectionObserver = null;
-    this._uniforms = {};
-    this._uniformLocations = new Map();
-    this._hasTexture = false;
-    this._startTime = performance.now();
-    this._mouseData = new Float32Array(4);
-    this._isMouseDown = false;
 
     // Add ResizeObserver for handling CSS-based resizing
-    this._resizeObserver = new ResizeObserver((entries) => {
+    this.#resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         // Only update if dimensions actually changed
         const newWidth = entry.contentRect.width;
         const newHeight = entry.contentRect.height;
 
         // Skip if we have explicit attribute dimensions
-        if (this._width === null && this._height === null) {
+        if (this.#width === null && this.#height === null) {
           this.updateCanvasSize();
         }
       }
     });
 
-    // Bind methods to this
-    this._onMouseMove = this._onMouseMove.bind(this);
-    this._onMouseDown = this._onMouseDown.bind(this);
-    this._onMouseUp = this._onMouseUp.bind(this);
-
     // Default shaders
-    this.defaultFragmentShader = `
+    this.defaultFragmentShader = `#version 300 es
             precision highp float;
-            uniform sampler2D uTexture;
-            uniform vec2 uResolution;
-            uniform float uTime;
-            uniform vec4 uMouse;
-            uniform bool uHasTexture;
-            varying vec2 vTexCoord;
+            out vec4 fragColor;
+            uniform sampler2D u_texture;
+            uniform vec2 u_resolution;
+            uniform float u_time;
+            uniform vec4 u_mouse;
+            uniform bool u_has_texture;
+            in vec2 v_tex_coord;
 
             void main() {
-                if (uHasTexture) {
-                    gl_FragColor = texture2D(uTexture, vTexCoord);
+                if (u_has_texture) {
+                    fragColor = texture(u_texture, v_tex_coord);
                 } else {
                     // For non-textured cases, show the animated gradient
-                    vec2 uv = vTexCoord;
-                    uv.x *= uResolution.x/uResolution.y;
-                    vec3 color = 0.5 + 0.5 * cos(uTime + uv.xyx + vec3(0,2,4));
-                    gl_FragColor = vec4(color, 1.0);
+                    vec2 uv = v_tex_coord;
+                    uv.x *= u_resolution.x/u_resolution.y;
+                    vec3 color = 0.5 + 0.5 * cos(u_time + uv.xyx + vec3(0,2,4));
+                    fragColor = vec4(color, 1.0);
                 }
             }
         `;
 
-    this.vertexShader = `
-            attribute vec4 aPosition;
-            attribute vec2 aTexCoord;
-            varying vec2 vTexCoord;
+    this.vertexShader = `#version 300 es
+            precision highp float;
+            in vec4 a_position;
+            in vec2 a_tex_coord;
+            out vec2 v_tex_coord;
 
             void main() {
-                gl_Position = aPosition;
-                vTexCoord = aTexCoord;
+                gl_Position = a_position;
+                v_tex_coord = a_tex_coord;
             }
         `;
 
@@ -149,7 +158,10 @@ class MediaShader extends HTMLElement {
 
   set fragmentShader(value) {
     if (value) {
-      this.setAttribute("fragment-shader", value);
+      this.setAttribute(
+        "fragment-shader",
+        typeof value === "string" ? value : JSON.stringify(value)
+      );
     } else {
       this.removeAttribute("fragment-shader");
     }
@@ -267,20 +279,20 @@ class MediaShader extends HTMLElement {
    */
   connectedCallback() {
     // Start observing size changes
-    this._resizeObserver.observe(this);
+    this.#resizeObserver.observe(this);
 
     // Set up intersection observer for both lazy and eager loading
-    this._intersectionObserver = new IntersectionObserver(
+    this.#intersectionObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             // Initialize if not loaded, regardless of loading mode
-            if (!this._isLoaded) {
+            if (!this.#isLoaded) {
               this.initializeComponent();
             }
           } else {
             // Clean up when out of view, regardless of loading mode
-            if (this._isLoaded) {
+            if (this.#isLoaded) {
               this.cleanup();
             }
           }
@@ -290,26 +302,26 @@ class MediaShader extends HTMLElement {
         rootMargin: "50px", // Start loading slightly before element comes into view
       }
     );
-    this._intersectionObserver.observe(this);
+    this.#intersectionObserver.observe(this);
 
     // For eager loading, initialize immediately
-    if (this.loading === "eager" && !this._isLoaded) {
+    if (this.loading === "eager" && !this.#isLoaded) {
       this.initializeComponent();
     }
 
     // Add mouse event listeners
-    this.addEventListener("mousemove", this._onMouseMove);
-    this.addEventListener("mousedown", this._onMouseDown);
-    this.addEventListener("mouseup", this._onMouseUp);
+    this.addEventListener("mousemove", this.#onMouseMove);
+    this.addEventListener("mousedown", this.#onMouseDown);
+    this.addEventListener("mouseup", this.#onMouseUp);
     // Optional: handle mouse leaving the element
-    this.addEventListener("mouseleave", this._onMouseUp);
+    this.addEventListener("mouseleave", this.#onMouseUp);
   }
 
   /**
    * Initializes the component by setting up WebGL and loading media.
    */
   initializeComponent() {
-    if (this._isLoaded) return;
+    if (this.#isLoaded) return;
 
     // Remove any existing canvas first
     if (this.canvas) {
@@ -335,7 +347,7 @@ class MediaShader extends HTMLElement {
     this.initWebGL();
 
     // Mark as loaded before processing attributes to prevent circular dependencies
-    this._isLoaded = true;
+    this.#isLoaded = true;
 
     // Get initial attribute values
     const src = this.getAttribute("src");
@@ -352,12 +364,12 @@ class MediaShader extends HTMLElement {
       this.updateUniforms(uniforms);
     }
     if (width) {
-      this._width = width;
+      this.#width = width;
       this.style.width = width;
       this.updateCanvasSize();
     }
     if (height) {
-      this._height = height;
+      this.#height = height;
       this.style.height = height;
       this.updateCanvasSize();
     }
@@ -373,7 +385,7 @@ class MediaShader extends HTMLElement {
    * Cleans up resources when the component is unloaded.
    */
   cleanup() {
-    if (!this._isLoaded) return;
+    if (!this.#isLoaded) return;
 
     // Cancel animation frame
     if (this.animationFrame) {
@@ -389,14 +401,14 @@ class MediaShader extends HTMLElement {
     // Clean up WebGL resources
     if (this.gl) {
       // Delete buffers
-      if (this._buffers) {
-        if (this._buffers.position) {
-          this.gl.deleteBuffer(this._buffers.position);
+      if (this.#buffers) {
+        if (this.#buffers.position) {
+          this.gl.deleteBuffer(this.#buffers.position);
         }
-        if (this._buffers.texCoord) {
-          this.gl.deleteBuffer(this._buffers.texCoord);
+        if (this.#buffers.texCoord) {
+          this.gl.deleteBuffer(this.#buffers.texCoord);
         }
-        this._buffers = null;
+        this.#buffers = null;
       }
 
       // Delete textures
@@ -405,14 +417,29 @@ class MediaShader extends HTMLElement {
         this.texture = null;
       }
 
+      // Clean up framebuffers
+      this.cleanupFramebuffers();
+
       // Delete shader program
       if (this.program) {
         this.gl.deleteProgram(this.program);
         this.program = null;
       }
 
+      // Delete multi-pass shader programs
+      for (const program of this.programs) {
+        this.gl.deleteProgram(program);
+      }
+      this.programs = [];
+
       // Clear all attributes and uniforms
-      this._uniformLocations.clear();
+      this.#uniformLocations.clear();
+      this.#passUniformLocations = [];
+
+      // Reset multi-pass flags
+      this.#isMultiPass = false;
+      this.#fragmentShaders = [];
+      this.#passUniforms = [];
 
       // Clear the canvas
       this.gl.clear(this.gl.COLOR_BUFFER_BIT);
@@ -432,7 +459,7 @@ class MediaShader extends HTMLElement {
       this.canvas = null;
     }
 
-    this._isLoaded = false;
+    this.#isLoaded = false;
   }
 
   /**
@@ -441,22 +468,22 @@ class MediaShader extends HTMLElement {
    */
   disconnectedCallback() {
     // Stop observing size changes
-    this._resizeObserver.disconnect();
+    this.#resizeObserver.disconnect();
 
     // Disconnect intersection observer
-    if (this._intersectionObserver) {
-      this._intersectionObserver.disconnect();
-      this._intersectionObserver = null;
+    if (this.#intersectionObserver) {
+      this.#intersectionObserver.disconnect();
+      this.#intersectionObserver = null;
     }
 
     // Clean up resources
     this.cleanup();
 
     // Clean up event listeners
-    this.removeEventListener("mousemove", this._onMouseMove);
-    this.removeEventListener("mousedown", this._onMouseDown);
-    this.removeEventListener("mouseup", this._onMouseUp);
-    this.removeEventListener("mouseleave", this._onMouseUp);
+    this.removeEventListener("mousemove", this.#onMouseMove);
+    this.removeEventListener("mousedown", this.#onMouseDown);
+    this.removeEventListener("mouseup", this.#onMouseUp);
+    this.removeEventListener("mouseleave", this.#onMouseUp);
   }
 
   /**
@@ -467,6 +494,7 @@ class MediaShader extends HTMLElement {
     return [
       "src",
       "fragment-shader",
+      "vertex-shader",
       "width",
       "height",
       "uniforms",
@@ -497,12 +525,12 @@ class MediaShader extends HTMLElement {
         this.updateShader(newValue || this.defaultFragmentShader);
         break;
       case "width":
-        this._width = newValue;
+        this.#width = newValue;
         this.style.width = newValue;
         this.updateCanvasSize();
         break;
       case "height":
-        this._height = newValue;
+        this.#height = newValue;
         this.style.height = newValue;
         this.updateCanvasSize();
         break;
@@ -518,14 +546,14 @@ class MediaShader extends HTMLElement {
           try {
             if (shouldPlay) {
               await this.mediaElement.play();
-              this._playing = true;
+              this.#playing = true;
             } else {
               this.mediaElement.pause();
-              this._playing = false;
+              this.#playing = false;
             }
           } catch (e) {
             console.warn("Video playback control failed:", e);
-            this._playing = false;
+            this.#playing = false;
             this.setAttribute("playing", "false");
           }
         }
@@ -576,21 +604,29 @@ class MediaShader extends HTMLElement {
 
     // Store natural dimensions for aspect ratio
     if (naturalWidth && naturalHeight) {
-      this._naturalWidth = naturalWidth;
-      this._naturalHeight = naturalHeight;
+      this.#naturalWidth = naturalWidth;
+      this.#naturalHeight = naturalHeight;
       // Set aspect ratio on the host element
       this.style.aspectRatio = `${naturalWidth} / ${naturalHeight}`;
     }
 
-    let finalWidth = this._width;
-    let finalHeight = this._height;
+    let finalWidth = this.#width;
+    let finalHeight = this.#height;
     let rect = this.getBoundingClientRect();
 
-    if (this._width) {
+    if (this.#width) {
       finalWidth = rect.width;
     }
-    if (this._height) {
+    if (this.#height) {
       finalHeight = rect.height;
+    }
+
+    // Fallback to reasonable defaults if dimensions are still zero
+    if (finalWidth <= 0) {
+      finalWidth = 800; // Default width
+    }
+    if (finalHeight <= 0) {
+      finalHeight = 600; // Default height
     }
 
     // Get device pixel ratio for high DPI displays
@@ -603,6 +639,15 @@ class MediaShader extends HTMLElement {
     // Update WebGL viewport
     if (this.gl) {
       this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+
+      // Resize framebuffers if they exist
+      if (this.#framebuffers.length > 0) {
+        this.resizeFramebuffers();
+      }
+      // If we have multi-pass shaders but no framebuffers, create them now
+      else if (this.#isMultiPass && this.programs.length > 1) {
+        this.createFramebuffers(this.programs.length - 1);
+      }
     }
   }
 
@@ -644,7 +689,7 @@ class MediaShader extends HTMLElement {
    */
   async loadMedia(src) {
     if (!src) {
-      this._hasTexture = false;
+      this.#hasTexture = false;
       return;
     }
 
@@ -656,15 +701,12 @@ class MediaShader extends HTMLElement {
     if (this.mediaElement) {
       if (this.mediaElement.tagName === "VIDEO") {
         this.mediaElement.pause();
-        this.mediaElement.removeEventListener("play", this._onPlay);
-        this.mediaElement.removeEventListener("pause", this._onPause);
-        this.mediaElement.removeEventListener("timeupdate", this._onTimeUpdate);
         if ("requestVideoFrameCallback" in this.mediaElement) {
-          this.mediaElement.cancelVideoFrameCallback(this._videoFrameCallback);
+          this.mediaElement.cancelVideoFrameCallback(this.#videoFrameCallback);
         }
       }
       this.mediaElement.remove();
-      this._hasTexture = false;
+      this.#hasTexture = false;
     }
 
     // Create new media element
@@ -697,14 +739,14 @@ class MediaShader extends HTMLElement {
 
               // Initialize video playback
               const shouldPlay = this.getAttribute("playing") !== "false";
-              this._playing = shouldPlay;
+              this.#playing = shouldPlay;
 
               if (shouldPlay) {
                 try {
                   await this.mediaElement.play();
                 } catch (e) {
                   console.warn("Initial video play failed:", e);
-                  this._playing = false;
+                  this.#playing = false;
                   this.setAttribute("playing", "false");
                 }
               }
@@ -728,14 +770,14 @@ class MediaShader extends HTMLElement {
                 this.mediaElement
               );
             }
-            if (this._playing && this.isConnected) {
+            if (this.#playing && this.isConnected) {
               if ("requestVideoFrameCallback" in this.mediaElement) {
-                this._videoFrameCallback =
+                this.#videoFrameCallback =
                   this.mediaElement.requestVideoFrameCallback(
                     updateVideoTexture
                   );
               } else {
-                this._videoFrameCallback =
+                this.#videoFrameCallback =
                   requestAnimationFrame(updateVideoTexture);
               }
             }
@@ -743,35 +785,35 @@ class MediaShader extends HTMLElement {
 
           // Set up video texture update using requestVideoFrameCallback if available
           if ("requestVideoFrameCallback" in this.mediaElement) {
-            this._videoFrameCallback =
+            this.#videoFrameCallback =
               this.mediaElement.requestVideoFrameCallback(updateVideoTexture);
           } else {
-            this._videoFrameCallback =
+            this.#videoFrameCallback =
               requestAnimationFrame(updateVideoTexture);
           }
 
           // Add event listeners for play/pause
           this.mediaElement.addEventListener("play", () => {
-            this._playing = true;
+            this.#playing = true;
             // Restart frame updates
             if ("requestVideoFrameCallback" in this.mediaElement) {
-              this._videoFrameCallback =
+              this.#videoFrameCallback =
                 this.mediaElement.requestVideoFrameCallback(updateVideoTexture);
             } else {
-              this._videoFrameCallback =
+              this.#videoFrameCallback =
                 requestAnimationFrame(updateVideoTexture);
             }
           });
 
           this.mediaElement.addEventListener("pause", () => {
-            this._playing = false;
+            this.#playing = false;
             // Cancel frame updates
             if ("requestVideoFrameCallback" in this.mediaElement) {
               this.mediaElement.cancelVideoFrameCallback(
-                this._videoFrameCallback
+                this.#videoFrameCallback
               );
             } else {
-              cancelAnimationFrame(this._videoFrameCallback);
+              cancelAnimationFrame(this.#videoFrameCallback);
             }
           });
 
@@ -799,7 +841,7 @@ class MediaShader extends HTMLElement {
               this.gl.UNSIGNED_BYTE,
               this.mediaElement
             );
-            this._hasTexture = true;
+            this.#hasTexture = true;
 
             resolve();
           };
@@ -821,7 +863,7 @@ class MediaShader extends HTMLElement {
         this.mediaElement.remove();
         this.mediaElement = null;
       }
-      this._hasTexture = false;
+      this.#hasTexture = false;
     }
   }
 
@@ -888,7 +930,7 @@ class MediaShader extends HTMLElement {
       );
     }
 
-    this._hasTexture = true;
+    this.#hasTexture = true;
   }
 
   /**
@@ -955,7 +997,7 @@ class MediaShader extends HTMLElement {
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, positionBuffer);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, positions, this.gl.STATIC_DRAW);
 
-    const aPosition = this.gl.getAttribLocation(this.program, "aPosition");
+    const aPosition = this.gl.getAttribLocation(this.program, "a_position");
     this.gl.enableVertexAttribArray(aPosition);
     this.gl.vertexAttribPointer(aPosition, 2, this.gl.FLOAT, false, 0, 0);
 
@@ -968,12 +1010,12 @@ class MediaShader extends HTMLElement {
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, texCoordBuffer);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, texCoords, this.gl.STATIC_DRAW);
 
-    const aTexCoord = this.gl.getAttribLocation(this.program, "aTexCoord");
+    const aTexCoord = this.gl.getAttribLocation(this.program, "a_tex_coord");
     this.gl.enableVertexAttribArray(aTexCoord);
     this.gl.vertexAttribPointer(aTexCoord, 2, this.gl.FLOAT, false, 0, 0);
 
     // Store buffer references for cleanup
-    this._buffers = {
+    this.#buffers = {
       position: positionBuffer,
       texCoord: texCoordBuffer,
     };
@@ -985,7 +1027,7 @@ class MediaShader extends HTMLElement {
     this.gl.useProgram(this.program);
 
     // Set up initial texture state
-    const uTexture = this._uniformLocations.get("uTexture");
+    const uTexture = this.#uniformLocations.get("u_texture");
     if (uTexture) {
       this.gl.uniform1i(uTexture, 0);
     }
@@ -1011,6 +1053,7 @@ class MediaShader extends HTMLElement {
 
     if (!this.gl.getShaderParameter(shader, this.gl.COMPILE_STATUS)) {
       console.error("Shader compile error:", this.gl.getShaderInfoLog(shader));
+      console.error("Shader source:", source);
       this.gl.deleteShader(shader);
       return null;
     }
@@ -1019,11 +1062,179 @@ class MediaShader extends HTMLElement {
   }
 
   /**
+   * Creates framebuffers for multi-pass rendering.
+   * @param {number} count - Number of framebuffers to create
+   */
+  createFramebuffers(count) {
+    if (!this.gl) return;
+
+    // Ensure canvas has valid dimensions before creating framebuffers
+    if (this.canvas.width === 0 || this.canvas.height === 0) {
+      this.updateCanvasSize();
+      // If still zero after update, don't create framebuffers
+      if (this.canvas.width === 0 || this.canvas.height === 0) {
+        console.warn("Cannot create framebuffers: canvas has zero dimensions");
+        return;
+      }
+    }
+
+    // Clean up existing framebuffers
+    this.cleanupFramebuffers();
+
+    for (let i = 0; i < count; i++) {
+      const framebuffer = this.gl.createFramebuffer();
+      const texture = this.gl.createTexture();
+
+      if (!framebuffer || !texture) {
+        console.error("Failed to create framebuffer or texture");
+        continue;
+      }
+
+      // Configure the texture
+      this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+      this.gl.texImage2D(
+        this.gl.TEXTURE_2D,
+        0,
+        this.gl.RGBA,
+        this.canvas.width,
+        this.canvas.height,
+        0,
+        this.gl.RGBA,
+        this.gl.UNSIGNED_BYTE,
+        null
+      );
+
+      // Set texture parameters
+      this.gl.texParameteri(
+        this.gl.TEXTURE_2D,
+        this.gl.TEXTURE_MIN_FILTER,
+        this.gl.LINEAR
+      );
+      this.gl.texParameteri(
+        this.gl.TEXTURE_2D,
+        this.gl.TEXTURE_MAG_FILTER,
+        this.gl.LINEAR
+      );
+      this.gl.texParameteri(
+        this.gl.TEXTURE_2D,
+        this.gl.TEXTURE_WRAP_S,
+        this.gl.CLAMP_TO_EDGE
+      );
+      this.gl.texParameteri(
+        this.gl.TEXTURE_2D,
+        this.gl.TEXTURE_WRAP_T,
+        this.gl.CLAMP_TO_EDGE
+      );
+
+      // Attach texture to framebuffer
+      this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, framebuffer);
+      this.gl.framebufferTexture2D(
+        this.gl.FRAMEBUFFER,
+        this.gl.COLOR_ATTACHMENT0,
+        this.gl.TEXTURE_2D,
+        texture,
+        0
+      );
+
+      // Check framebuffer completeness
+      if (
+        this.gl.checkFramebufferStatus(this.gl.FRAMEBUFFER) !==
+        this.gl.FRAMEBUFFER_COMPLETE
+      ) {
+        console.error(`Framebuffer ${i} is not complete`);
+        this.gl.deleteFramebuffer(framebuffer);
+        this.gl.deleteTexture(texture);
+        continue;
+      }
+
+      this.#framebuffers.push(framebuffer);
+      this.#framebufferTextures.push(texture);
+    }
+
+    // Unbind framebuffer
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+  }
+
+  /**
+   * Cleans up framebuffers and their textures.
+   */
+  cleanupFramebuffers() {
+    if (!this.gl) return;
+
+    // Delete framebuffers
+    for (const framebuffer of this.#framebuffers) {
+      this.gl.deleteFramebuffer(framebuffer);
+    }
+    this.#framebuffers = [];
+
+    // Delete framebuffer textures
+    for (const texture of this.#framebufferTextures) {
+      this.gl.deleteTexture(texture);
+    }
+    this.#framebufferTextures = [];
+  }
+
+  /**
+   * Resizes framebuffers when canvas size changes.
+   */
+  resizeFramebuffers() {
+    if (!this.gl || this.#framebuffers.length === 0) return;
+
+    // Resize each framebuffer texture
+    for (let i = 0; i < this.#framebufferTextures.length; i++) {
+      this.gl.bindTexture(this.gl.TEXTURE_2D, this.#framebufferTextures[i]);
+      this.gl.texImage2D(
+        this.gl.TEXTURE_2D,
+        0,
+        this.gl.RGBA,
+        this.canvas.width,
+        this.canvas.height,
+        0,
+        this.gl.RGBA,
+        this.gl.UNSIGNED_BYTE,
+        null
+      );
+    }
+
+    // Unbind texture
+    this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+  }
+
+  /**
    * Updates the fragment shader with new source code.
-   * @param {string} fragmentShaderSource - The new GLSL fragment shader code
+   * @param {string|string[]} fragmentShaderSource - The new GLSL fragment shader code (string for single-pass, array for multi-pass)
    */
   updateShader(fragmentShaderSource) {
     if (!this.gl) return;
+
+    // Skip empty or whitespace-only strings
+    if (!fragmentShaderSource || fragmentShaderSource.trim() === "") {
+      console.warn("Empty fragment shader source provided");
+      return;
+    }
+
+    try {
+      // Try to parse as JSON first to detect if it's an array
+      const parsed = JSON.parse(fragmentShaderSource);
+      if (Array.isArray(parsed)) {
+        // Multi-pass shaders
+        this.updateMultiPassShaders(parsed);
+        return;
+      }
+    } catch (e) {
+      // Not JSON, treat as single shader string
+    }
+
+    // Single-pass shader
+    this.#isMultiPass = false;
+    this.cleanupFramebuffers();
+
+    // Clean up multi-pass programs
+    for (const program of this.programs) {
+      this.gl.deleteProgram(program);
+    }
+    this.programs = [];
+    this.#passUniformLocations = [];
 
     // Create new shader program
     const vertShader = this.createShader(
@@ -1068,17 +1279,33 @@ class MediaShader extends HTMLElement {
 
   /**
    * Updates uniform values from a JSON string.
-   * @param {string} uniformsStr - JSON string containing uniform values
+   * @param {string} uniformsStr - JSON string containing uniform values (object for single-pass, array for multi-pass)
    */
   updateUniforms(uniformsStr) {
     try {
-      const newUniforms = uniformsStr ? JSON.parse(uniformsStr) : {};
-      this._uniforms = newUniforms;
+      const parsed = uniformsStr ? JSON.parse(uniformsStr) : {};
 
-      // If we have an active program, update the uniform locations and apply uniforms
-      if (this.program) {
-        this.updateUniformLocations();
-        this.applyUniforms();
+      if (Array.isArray(parsed)) {
+        // Multi-pass uniforms
+        this.#passUniforms = parsed;
+        this.#uniforms = {}; // Clear global uniforms when using per-pass uniforms
+        console.log("updateUniforms (multi-pass)", this.#passUniforms);
+
+        // Update uniform locations and apply uniforms for multi-pass
+        if (this.#isMultiPass && this.programs.length > 0) {
+          this.updatePassUniformLocations();
+        }
+      } else {
+        // Single-pass uniforms
+        this.#uniforms = parsed;
+        this.#passUniforms = []; // Clear per-pass uniforms when using global uniforms
+        console.log("updateUniforms (single-pass)", this.#uniforms);
+
+        // If we have an active program, update the uniform locations and apply uniforms
+        if (this.program) {
+          this.updateUniformLocations();
+          this.applyUniforms();
+        }
       }
     } catch (error) {
       console.error("Error parsing uniforms JSON:", error);
@@ -1086,47 +1313,205 @@ class MediaShader extends HTMLElement {
   }
 
   /**
+   * Updates multi-pass shader programs from an array of shaders.
+   * @param {string[]} shaders - Array of fragment shader strings
+   */
+  updateMultiPassShaders(shaders) {
+    if (!Array.isArray(shaders) || shaders.length === 0) {
+      console.error("fragment-shaders must be a non-empty array");
+      return;
+    }
+
+    console.log(`Setting up multi-pass shaders: ${shaders.length} passes`);
+    this.#fragmentShaders = shaders;
+    this.#isMultiPass = true;
+
+    // Clean up existing single-pass program
+    if (this.program) {
+      this.gl.deleteProgram(this.program);
+      this.program = null;
+    }
+
+    // Clean up existing multi-pass programs
+    for (const program of this.programs) {
+      if (this.gl) {
+        this.gl.deleteProgram(program);
+      }
+    }
+    this.programs = [];
+    this.#passUniformLocations = [];
+
+    if (!this.gl) return;
+
+    // Create shader programs for each pass
+    for (let i = 0; i < shaders.length; i++) {
+      const vertShader = this.createShader(
+        this.gl.VERTEX_SHADER,
+        this.vertexShader
+      );
+      const fragShader = this.createShader(this.gl.FRAGMENT_SHADER, shaders[i]);
+
+      if (!vertShader || !fragShader) {
+        console.error(`Failed to create shaders for pass ${i}`);
+        if (vertShader) this.gl.deleteShader(vertShader);
+        if (fragShader) this.gl.deleteShader(fragShader);
+        continue;
+      }
+
+      const program = this.gl.createProgram();
+      if (!program) {
+        console.error(`Failed to create program for pass ${i}`);
+        this.gl.deleteShader(vertShader);
+        this.gl.deleteShader(fragShader);
+        continue;
+      }
+
+      this.gl.attachShader(program, vertShader);
+      this.gl.attachShader(program, fragShader);
+      this.gl.linkProgram(program);
+
+      if (!this.gl.getProgramParameter(program, this.gl.LINK_STATUS)) {
+        console.error(
+          `Failed to link program for pass ${i}:`,
+          this.gl.getProgramInfoLog(program)
+        );
+        this.gl.deleteShader(vertShader);
+        this.gl.deleteShader(fragShader);
+        this.gl.deleteProgram(program);
+        continue;
+      } else {
+        console.log(`Successfully created program for pass ${i}`);
+      }
+
+      // Clean up shaders after linking
+      this.gl.deleteShader(vertShader);
+      this.gl.deleteShader(fragShader);
+
+      this.programs.push(program);
+      this.#passUniformLocations.push(new Map());
+    }
+
+    // Create framebuffers for intermediate passes (need one less than number of passes)
+    if (this.programs.length > 1) {
+      this.createFramebuffers(this.programs.length - 1);
+    }
+
+    // Update uniform locations for all passes
+    this.updatePassUniformLocations();
+
+    console.log(
+      `Created ${this.programs.length} shader programs for multi-pass rendering`
+    );
+
+    // If no programs were successfully created, reset to single-pass mode
+    if (this.programs.length === 0) {
+      console.warn(
+        "No shader programs were successfully created, resetting to single-pass mode"
+      );
+      this.#isMultiPass = false;
+      this.#fragmentShaders = [];
+      return;
+    }
+  }
+
+  /**
+   * Updates uniform locations for all passes.
+   */
+  updatePassUniformLocations() {
+    if (!this.gl || !this.#isMultiPass) return;
+
+    // Update uniform locations for each pass
+    for (let passIndex = 0; passIndex < this.programs.length; passIndex++) {
+      const program = this.programs[passIndex];
+      const uniformLocations = this.#passUniformLocations[passIndex];
+
+      if (!uniformLocations) continue;
+
+      uniformLocations.clear();
+
+      // Get locations for built-in uniforms
+      const builtInUniforms = [
+        "u_texture",
+        "u_resolution",
+        "u_time",
+        "u_mouse",
+        "u_has_texture",
+      ];
+      for (const uniformName of builtInUniforms) {
+        const location = this.gl.getUniformLocation(program, uniformName);
+        if (location !== null) {
+          uniformLocations.set(uniformName, location);
+        }
+      }
+
+      // Get locations for global uniforms
+      for (const uniformName of Object.keys(this.#uniforms)) {
+        const location = this.gl.getUniformLocation(program, uniformName);
+        if (location !== null) {
+          uniformLocations.set(uniformName, location);
+        }
+      }
+
+      // Get locations for pass-specific uniforms
+      if (this.#passUniforms[passIndex]) {
+        for (const uniformName of Object.keys(this.#passUniforms[passIndex])) {
+          const location = this.gl.getUniformLocation(program, uniformName);
+          if (location !== null) {
+            uniformLocations.set(uniformName, location);
+          }
+        }
+      }
+    }
+  }
+
+  /**
    * Updates the locations of uniforms in the shader program.
    */
   updateUniformLocations() {
-    this._uniformLocations.clear();
+    this.#uniformLocations.clear();
 
     // Get locations for all uniforms
-    for (const name of Object.keys(this._uniforms)) {
+    for (const name of Object.keys(this.#uniforms)) {
       const location = this.gl.getUniformLocation(this.program, name);
       if (location !== null) {
-        this._uniformLocations.set(name, location);
+        this.#uniformLocations.set(name, location);
       } else {
         console.warn(`Uniform '${name}' not found in shader program`);
       }
     }
 
     // Also get locations for built-in uniforms
-    const uResolution = this.gl.getUniformLocation(this.program, "uResolution");
+    const uResolution = this.gl.getUniformLocation(
+      this.program,
+      "u_resolution"
+    );
     if (uResolution !== null) {
-      this._uniformLocations.set("uResolution", uResolution);
+      this.#uniformLocations.set("u_resolution", uResolution);
     }
 
-    const uTexture = this.gl.getUniformLocation(this.program, "uTexture");
+    const uTexture = this.gl.getUniformLocation(this.program, "u_texture");
     if (uTexture !== null) {
-      this._uniformLocations.set("uTexture", uTexture);
+      this.#uniformLocations.set("u_texture", uTexture);
     }
 
     // Add new built-in uniform locations
-    const uTime = this.gl.getUniformLocation(this.program, "uTime");
+    const uTime = this.gl.getUniformLocation(this.program, "u_time");
     if (uTime !== null) {
-      this._uniformLocations.set("uTime", uTime);
+      this.#uniformLocations.set("u_time", uTime);
     }
 
-    const uMouse = this.gl.getUniformLocation(this.program, "uMouse");
+    const uMouse = this.gl.getUniformLocation(this.program, "u_mouse");
     if (uMouse !== null) {
-      this._uniformLocations.set("uMouse", uMouse);
+      this.#uniformLocations.set("u_mouse", uMouse);
     }
 
     // Add new built-in uniform locations
-    const uHasTexture = this.gl.getUniformLocation(this.program, "uHasTexture");
+    const uHasTexture = this.gl.getUniformLocation(
+      this.program,
+      "u_has_texture"
+    );
     if (uHasTexture !== null) {
-      this._uniformLocations.set("uHasTexture", uHasTexture);
+      this.#uniformLocations.set("u_has_texture", uHasTexture);
     }
   }
 
@@ -1139,34 +1524,142 @@ class MediaShader extends HTMLElement {
     this.gl.useProgram(this.program);
 
     // Apply each uniform based on its type
-    for (const [name, value] of Object.entries(this._uniforms)) {
-      const location = this._uniformLocations.get(name);
+    for (const [name, value] of Object.entries(this.#uniforms)) {
+      const location = this.#uniformLocations.get(name);
       if (location === undefined) {
         //console.warn(`No location found for uniform '${name}'`);
         continue;
       }
 
       if (Array.isArray(value)) {
-        switch (value.length) {
-          case 2:
-            this.gl.uniform2f(location, value[0], value[1]);
-            break;
-          case 3:
-            this.gl.uniform3f(location, value[0], value[1], value[2]);
-            break;
-          case 4:
-            this.gl.uniform4f(location, value[0], value[1], value[2], value[3]);
-            break;
-          case 9:
-            this.gl.uniformMatrix3fv(location, false, new Float32Array(value));
-            break;
-          case 16:
-            this.gl.uniformMatrix4fv(location, false, new Float32Array(value));
-            break;
+        // Check if this is an array of arrays (uniform array) vs flat array (single vector)
+        const isUniformArray = value.every((item) => Array.isArray(item));
+        const flatValue = isUniformArray ? value.flat() : value;
+        const len = flatValue.length;
+
+        if (isUniformArray) {
+          // Handle uniform arrays (vec2[], vec3[], vec4[], etc.)
+          // First try to detect the actual uniform type from shader source
+          const shaderSource =
+            this.fragmentShader || this.getAttribute("fragment-shader") || "";
+          const uniformRegex = new RegExp(
+            `uniform\\s+(\\w+)\\s+${name}\\s*\\[`,
+            "g"
+          );
+          const match = uniformRegex.exec(shaderSource);
+
+          let elementSize = value[0].length; // Default to JavaScript array size
+
+          if (match) {
+            const uniformType = match[1];
+            // Override element size based on shader declaration
+            switch (uniformType) {
+              case "float":
+              case "int":
+              case "bool":
+                elementSize = 1;
+                break;
+              case "vec2":
+              case "ivec2":
+              case "bvec2":
+                elementSize = 2;
+                break;
+              case "vec3":
+              case "ivec3":
+              case "bvec3":
+                elementSize = 3;
+                break;
+              case "vec4":
+              case "ivec4":
+              case "bvec4":
+                elementSize = 4;
+                break;
+            }
+          }
+
+          if (elementSize === 1) {
+            // float array
+            this.gl.uniform1fv(location, new Float32Array(flatValue));
+          } else if (elementSize === 2) {
+            // vec2 array - take first 2 elements of each sub-array
+            const vec2Data = value.flatMap((arr) => arr.slice(0, 2));
+            this.gl.uniform2fv(location, new Float32Array(vec2Data));
+          } else if (elementSize === 3) {
+            // vec3 array - take first 3 elements of each sub-array
+            const vec3Data = value.flatMap((arr) => arr.slice(0, 3));
+            this.gl.uniform3fv(location, new Float32Array(vec3Data));
+          } else if (elementSize === 4) {
+            // vec4 array
+            this.gl.uniform4fv(location, new Float32Array(flatValue));
+          } else {
+            console.warn(
+              `Unsupported uniform array element size: ${elementSize}`
+            );
+          }
+        } else {
+          // Handle single vectors, matrices, and scalar arrays
+          if (len === 1) {
+            this.gl.uniform1f(location, flatValue[0]);
+          } else if (len === 2) {
+            this.gl.uniform2f(location, flatValue[0], flatValue[1]);
+          } else if (len === 3) {
+            this.gl.uniform3f(
+              location,
+              flatValue[0],
+              flatValue[1],
+              flatValue[2]
+            );
+          } else if (len === 4) {
+            this.gl.uniform4f(
+              location,
+              flatValue[0],
+              flatValue[1],
+              flatValue[2],
+              flatValue[3]
+            );
+          } else if (len === 9) {
+            // 3x3 matrix
+            this.gl.uniformMatrix3fv(
+              location,
+              false,
+              new Float32Array(flatValue)
+            );
+          } else if (len === 16) {
+            // 4x4 matrix
+            this.gl.uniformMatrix4fv(
+              location,
+              false,
+              new Float32Array(flatValue)
+            );
+          } else {
+            // Handle arbitrary-length arrays as scalar uniform arrays
+            // Check if array contains booleans or integers
+            const isBoolean = value.every((v) => typeof v === "boolean");
+            const isInteger = value.every(
+              (v) => typeof v === "number" && Number.isInteger(v)
+            );
+
+            if (isBoolean || isInteger) {
+              // Convert booleans to integers (0/1) and pass as integer array
+              const intArray = value.map((v) =>
+                typeof v === "boolean" ? (v ? 1 : 0) : v
+              );
+              this.gl.uniform1iv(location, new Int32Array(intArray));
+            } else {
+              // Assume float array for any other numeric values
+              this.gl.uniform1fv(location, new Float32Array(flatValue));
+            }
+          }
         }
       } else if (typeof value === "number") {
         if (Number.isInteger(value)) {
-          this.gl.uniform1i(location, value);
+          const regex = new RegExp(`uniform(.*)float(.*)${name}\\s*;`);
+          const match = regex.exec(this.fragmentShader); //match for this pass
+          if (match) {
+            this.gl.uniform1f(location, value);
+          } else {
+            this.gl.uniform1i(location, value);
+          }
         } else {
           this.gl.uniform1f(location, value);
         }
@@ -1177,15 +1670,219 @@ class MediaShader extends HTMLElement {
   }
 
   /**
+   * Applies uniforms for a specific pass.
+   * @param {number} passIndex - The index of the pass
+   * @param {WebGLProgram} program - The shader program for this pass
+   * @param {Map} uniformLocations - The uniform locations for this pass
+   */
+  applyPassUniforms(passIndex, program, uniformLocations) {
+    if (!this.gl || !program || !uniformLocations) return;
+
+    this.gl.useProgram(program);
+
+    // Helper function to set uniform values
+    const setUniform = (name, location, value) => {
+      if (Array.isArray(value)) {
+        // Check if this is an array of arrays (uniform array) vs flat array (single vector)
+        const isUniformArray = value.every((item) => Array.isArray(item));
+        const flatValue = isUniformArray ? value.flat() : value;
+        const len = flatValue.length;
+
+        if (isUniformArray) {
+          // Handle uniform arrays (vec2[], vec3[], vec4[], etc.)
+          // First try to detect the actual uniform type from shader source
+          const shaderSource = this.#fragmentShaders[passIndex] || "";
+          const uniformRegex = new RegExp(
+            `uniform\\s+(\\w+)\\s+${name}\\s*\\[`,
+            "g"
+          );
+          const match = uniformRegex.exec(shaderSource);
+
+          let elementSize = value[0].length; // Default to JavaScript array size
+
+          if (match) {
+            const uniformType = match[1];
+            // Override element size based on shader declaration
+            switch (uniformType) {
+              case "float":
+              case "int":
+              case "bool":
+                elementSize = 1;
+                break;
+              case "vec2":
+              case "ivec2":
+              case "bvec2":
+                elementSize = 2;
+                break;
+              case "vec3":
+              case "ivec3":
+              case "bvec3":
+                elementSize = 3;
+                break;
+              case "vec4":
+              case "ivec4":
+              case "bvec4":
+                elementSize = 4;
+                break;
+            }
+          }
+
+          if (elementSize === 1) {
+            // float array
+            this.gl.uniform1fv(location, new Float32Array(flatValue));
+          } else if (elementSize === 2) {
+            // vec2 array - take first 2 elements of each sub-array
+            const vec2Data = value.flatMap((arr) => arr.slice(0, 2));
+            this.gl.uniform2fv(location, new Float32Array(vec2Data));
+          } else if (elementSize === 3) {
+            // vec3 array - take first 3 elements of each sub-array
+            const vec3Data = value.flatMap((arr) => arr.slice(0, 3));
+            this.gl.uniform3fv(location, new Float32Array(vec3Data));
+          } else if (elementSize === 4) {
+            // vec4 array
+            this.gl.uniform4fv(location, new Float32Array(flatValue));
+          } else {
+            console.warn(
+              `Unsupported uniform array element size: ${elementSize}`
+            );
+          }
+        } else {
+          // Handle single vectors, matrices, and scalar arrays
+          if (len === 1) {
+            this.gl.uniform1f(location, flatValue[0]);
+          } else if (len === 2) {
+            this.gl.uniform2f(location, flatValue[0], flatValue[1]);
+          } else if (len === 3) {
+            this.gl.uniform3f(
+              location,
+              flatValue[0],
+              flatValue[1],
+              flatValue[2]
+            );
+          } else if (len === 4) {
+            this.gl.uniform4f(
+              location,
+              flatValue[0],
+              flatValue[1],
+              flatValue[2],
+              flatValue[3]
+            );
+          } else if (len === 9) {
+            // 3x3 matrix
+            this.gl.uniformMatrix3fv(
+              location,
+              false,
+              new Float32Array(flatValue)
+            );
+          } else if (len === 16) {
+            // 4x4 matrix
+            this.gl.uniformMatrix4fv(
+              location,
+              false,
+              new Float32Array(flatValue)
+            );
+          } else {
+            // Handle arbitrary-length arrays as scalar uniform arrays
+            // Check if array contains booleans or integers
+            const isBoolean = value.every((v) => typeof v === "boolean");
+            const isInteger = value.every(
+              (v) => typeof v === "number" && Number.isInteger(v)
+            );
+
+            if (isBoolean || isInteger) {
+              // Convert booleans to integers (0/1) and pass as integer array
+              const intArray = value.map((v) =>
+                typeof v === "boolean" ? (v ? 1 : 0) : v
+              );
+              this.gl.uniform1iv(location, new Int32Array(intArray));
+            } else {
+              // Assume float array for any other numeric values
+              this.gl.uniform1fv(location, new Float32Array(flatValue));
+            }
+          }
+        }
+      } else if (typeof value === "number") {
+        if (Number.isInteger(value)) {
+          const regex = new RegExp(`uniform(.*)float(.*)${name}\\s*;`);
+          const match = regex.exec(this.#fragmentShaders[passIndex]); //match for this pass
+          if (match) {
+            this.gl.uniform1f(location, value);
+          } else {
+            this.gl.uniform1i(location, value);
+          }
+        } else {
+          this.gl.uniform1f(location, value);
+        }
+      } else if (typeof value === "boolean") {
+        this.gl.uniform1i(location, value ? 1 : 0);
+      }
+    };
+
+    // Apply global uniforms
+    for (const [name, value] of Object.entries(this.#uniforms)) {
+      const location = uniformLocations.get(name);
+      if (location !== undefined) {
+        setUniform(name, location, value);
+      }
+    }
+
+    // Apply pass-specific uniforms
+    if (this.#passUniforms[passIndex]) {
+      for (const [name, value] of Object.entries(
+        this.#passUniforms[passIndex]
+      )) {
+        const location = uniformLocations.get(name);
+        if (location !== undefined) {
+          setUniform(name, location, value);
+        }
+      }
+    }
+
+    // Apply built-in uniforms
+    const uResolution = uniformLocations.get("u_resolution");
+    if (uResolution) {
+      this.gl.uniform2f(uResolution, this.canvas.width, this.canvas.height);
+    }
+
+    const uTime = uniformLocations.get("u_time");
+    if (uTime) {
+      const timeInSeconds = (performance.now() - this.#startTime) / 1000.0;
+      this.gl.uniform1f(uTime, timeInSeconds);
+    }
+
+    const uMouse = uniformLocations.get("u_mouse");
+    if (uMouse) {
+      this.gl.uniform4fv(uMouse, this.#mouseData);
+    }
+
+    const uHasTexture = uniformLocations.get("u_has_texture");
+    if (uHasTexture) {
+      this.gl.uniform1i(uHasTexture, this.#hasTexture ? 1 : 0);
+    }
+
+    const uTexture = uniformLocations.get("u_texture");
+    if (uTexture) {
+      this.gl.uniform1i(uTexture, 0);
+    }
+  }
+
+  /**
    * Starts the render loop for continuous rendering.
    */
   startRenderLoop() {
-    if (!this.gl || !this.program) {
+    if (
+      !this.gl ||
+      (!this.program && (!this.#isMultiPass || this.programs.length === 0))
+    ) {
+      console.warn("Cannot start render loop: no valid shader programs");
       return;
     }
 
     const render = () => {
-      if (!this.gl || !this.program) {
+      if (
+        !this.gl ||
+        (!this.program && (!this.#isMultiPass || this.programs.length === 0))
+      ) {
         if (this.animationFrame) {
           cancelAnimationFrame(this.animationFrame);
           this.animationFrame = null;
@@ -1194,9 +1891,6 @@ class MediaShader extends HTMLElement {
       }
 
       this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-      this.gl.clear(this.gl.COLOR_BUFFER_BIT);
-
-      this.gl.useProgram(this.program);
 
       // Only update texture if we have media element and it's an image
       // (video textures are updated in the timeupdate event)
@@ -1216,47 +1910,20 @@ class MediaShader extends HTMLElement {
             this.gl.UNSIGNED_BYTE,
             this.mediaElement
           );
-          this._hasTexture = true;
+          this.#hasTexture = true;
         } catch (e) {
           console.warn("Failed to update texture:", e);
-          this._hasTexture = false;
+          this.#hasTexture = false;
         }
       }
 
-      // Set built-in uniforms
-      const uResolution = this._uniformLocations.get("uResolution");
-      if (uResolution) {
-        this.gl.uniform2f(uResolution, this.canvas.width, this.canvas.height);
+      if (this.#isMultiPass && this.programs.length > 0) {
+        // Multi-pass rendering
+        this.renderMultiPass();
+      } else {
+        // Single-pass rendering (backward compatibility)
+        this.renderSinglePass();
       }
-
-      const uTexture = this._uniformLocations.get("uTexture");
-      if (uTexture) {
-        this.gl.uniform1i(uTexture, 0);
-      }
-
-      const uHasTexture = this._uniformLocations.get("uHasTexture");
-      if (uHasTexture) {
-        this.gl.uniform1i(uHasTexture, this._hasTexture ? 1 : 0);
-      }
-
-      // Update time uniform
-      const uTime = this._uniformLocations.get("uTime");
-      if (uTime) {
-        const timeInSeconds = (performance.now() - this._startTime) / 1000.0;
-        this.gl.uniform1f(uTime, timeInSeconds);
-      }
-
-      // Update mouse uniform
-      const uMouse = this._uniformLocations.get("uMouse");
-      if (uMouse) {
-        this.gl.uniform4fv(uMouse, this._mouseData);
-      }
-
-      // Apply custom uniforms
-      this.applyUniforms();
-
-      // Draw
-      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
 
       this.animationFrame = requestAnimationFrame(render);
     };
@@ -1267,31 +1934,197 @@ class MediaShader extends HTMLElement {
     render();
   }
 
-  _onMouseMove(event) {
-    const rect = this.getBoundingClientRect();
-    // Normalize coordinates to [0,1]
-    this._mouseData[0] = (event.clientX - rect.left) / rect.width;
-    this._mouseData[1] = (event.clientY - rect.top) / rect.height;
-    // If mouse is down, update click position too
-    if (this._isMouseDown) {
-      this._mouseData[2] = this._mouseData[0];
-      this._mouseData[3] = this._mouseData[1];
+  /**
+   * Renders a single pass (backward compatibility).
+   */
+  renderSinglePass() {
+    if (!this.gl || !this.program) return;
+
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+    this.gl.useProgram(this.program);
+
+    // Set built-in uniforms
+    const uResolution = this.#uniformLocations.get("u_resolution");
+    if (uResolution) {
+      this.gl.uniform2f(uResolution, this.canvas.width, this.canvas.height);
+    }
+
+    const uTexture = this.#uniformLocations.get("u_texture");
+    if (uTexture) {
+      this.gl.uniform1i(uTexture, 0);
+    }
+
+    const uHasTexture = this.#uniformLocations.get("u_has_texture");
+    if (uHasTexture) {
+      this.gl.uniform1i(uHasTexture, this.#hasTexture ? 1 : 0);
+    }
+
+    // Update time uniform
+    const uTime = this.#uniformLocations.get("u_time");
+    if (uTime) {
+      const timeInSeconds = (performance.now() - this.#startTime) / 1000.0;
+      this.gl.uniform1f(uTime, timeInSeconds);
+    }
+
+    // Update mouse uniform
+    const uMouse = this.#uniformLocations.get("u_mouse");
+    if (uMouse) {
+      this.gl.uniform4fv(uMouse, this.#mouseData);
+    }
+
+    // Bind texture
+    this.gl.activeTexture(this.gl.TEXTURE0);
+    if (this.texture && this.#hasTexture) {
+      this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+    } else {
+      // Create a simple texture if no media
+      if (!this.texture) {
+        this.texture = this.createDummyTexture();
+      }
+      this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+    }
+
+    // Apply custom uniforms
+    this.applyUniforms();
+
+    // Draw
+    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  }
+
+  /**
+   * Renders multiple passes sequentially.
+   */
+  renderMultiPass() {
+    if (!this.gl || this.programs.length === 0) return;
+
+    for (let passIndex = 0; passIndex < this.programs.length; passIndex++) {
+      const program = this.programs[passIndex];
+      const uniformLocations = this.#passUniformLocations[passIndex];
+      const isLastPass = passIndex === this.programs.length - 1;
+
+      // Set render target
+      if (isLastPass) {
+        // Final pass renders to canvas
+        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+      } else {
+        // Intermediate pass renders to framebuffer
+        this.gl.bindFramebuffer(
+          this.gl.FRAMEBUFFER,
+          this.#framebuffers[passIndex]
+        );
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+      }
+
+      // Set input texture
+      this.gl.activeTexture(this.gl.TEXTURE0);
+
+      if (passIndex === 0) {
+        // First pass uses original texture or default
+        if (this.texture && this.#hasTexture) {
+          this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+        } else {
+          // Create a simple texture if no media
+          if (!this.texture) {
+            this.texture = this.createDummyTexture();
+          }
+          this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+        }
+      } else {
+        // Subsequent passes use output from previous pass
+        this.gl.bindTexture(
+          this.gl.TEXTURE_2D,
+          this.#framebufferTextures[passIndex - 1]
+        );
+      }
+
+      // Apply uniforms for this pass
+      this.applyPassUniforms(passIndex, program, uniformLocations);
+
+      // Draw
+      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     }
   }
 
-  _onMouseDown(event) {
-    this._isMouseDown = true;
-    const rect = this.getBoundingClientRect();
-    // Store click position
-    this._mouseData[2] = (event.clientX - rect.left) / rect.width;
-    this._mouseData[3] = (event.clientY - rect.top) / rect.height;
+  /**
+   * Creates a dummy texture for cases where no media is loaded.
+   * @returns {WebGLTexture} A 1x1 transparent texture
+   */
+  createDummyTexture() {
+    if (!this.gl) return null;
+
+    const texture = this.gl.createTexture();
+    this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+    this.gl.texImage2D(
+      this.gl.TEXTURE_2D,
+      0,
+      this.gl.RGBA,
+      1,
+      1,
+      0,
+      this.gl.RGBA,
+      this.gl.UNSIGNED_BYTE,
+      new Uint8Array([0, 0, 0, 0])
+    );
+    this.gl.texParameteri(
+      this.gl.TEXTURE_2D,
+      this.gl.TEXTURE_MIN_FILTER,
+      this.gl.LINEAR
+    );
+    this.gl.texParameteri(
+      this.gl.TEXTURE_2D,
+      this.gl.TEXTURE_MAG_FILTER,
+      this.gl.LINEAR
+    );
+    this.gl.texParameteri(
+      this.gl.TEXTURE_2D,
+      this.gl.TEXTURE_WRAP_S,
+      this.gl.CLAMP_TO_EDGE
+    );
+    this.gl.texParameteri(
+      this.gl.TEXTURE_2D,
+      this.gl.TEXTURE_WRAP_T,
+      this.gl.CLAMP_TO_EDGE
+    );
+
+    return texture;
   }
 
-  _onMouseUp() {
-    this._isMouseDown = false;
+  #onMouseMove(event) {
+    const rect = this.getBoundingClientRect();
+    // Normalize coordinates to [0,1]
+    this.#mouseData[0] = (event.clientX - rect.left) / rect.width;
+    this.#mouseData[1] = (event.clientY - rect.top) / rect.height;
+    // If mouse is down, update click position too
+    if (this.#isMouseDown) {
+      this.#mouseData[2] = this.#mouseData[0];
+      this.#mouseData[3] = this.#mouseData[1];
+    }
+  }
+
+  #onMouseDown(event) {
+    this.#isMouseDown = true;
+    const rect = this.getBoundingClientRect();
+    // Store click position
+    this.#mouseData[2] = (event.clientX - rect.left) / rect.width;
+    this.#mouseData[3] = (event.clientY - rect.top) / rect.height;
+  }
+
+  #onMouseUp() {
+    this.#isMouseDown = false;
     // Make click position negative when mouse is up
-    this._mouseData[2] = -Math.abs(this._mouseData[2]);
-    this._mouseData[3] = -Math.abs(this._mouseData[3]);
+    this.#mouseData[2] = -Math.abs(this.#mouseData[2]);
+    this.#mouseData[3] = -Math.abs(this.#mouseData[3]);
+  }
+
+  #parseJSONWithStringNumbers(jsonString) {
+    // Replace all numbers in the JSON string with quoted versions
+    const quotedNumbers = jsonString.replace(
+      /:\s*(-?\d+\.?\d*(?:[eE][+-]?\d+)?)/g,
+      ': "$1"'
+    );
+    return JSON.parse(quotedNumbers);
   }
 }
 
