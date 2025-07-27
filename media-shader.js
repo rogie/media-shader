@@ -1020,8 +1020,9 @@ class MediaShader extends HTMLElement {
       texCoord: texCoordBuffer,
     };
 
-    // Initialize uniform locations
-    this.updateUniformLocations();
+    // Initialize uniform locations only for built-in uniforms during initialization
+    // Custom uniforms will be handled when the custom shader is loaded
+    this.updateBuiltInUniformLocations();
 
     // Use the program
     this.gl.useProgram(this.program);
@@ -1465,6 +1466,27 @@ class MediaShader extends HTMLElement {
   }
 
   /**
+   * Updates the locations of built-in uniforms only (used during initialization).
+   */
+  updateBuiltInUniformLocations() {
+    // Only get locations for built-in uniforms during initialization
+    const builtInUniforms = [
+      "u_resolution",
+      "u_texture",
+      "u_time",
+      "u_mouse",
+      "u_has_texture",
+    ];
+
+    for (const uniformName of builtInUniforms) {
+      const location = this.gl.getUniformLocation(this.program, uniformName);
+      if (location !== null) {
+        this.#uniformLocations.set(uniformName, location);
+      }
+    }
+  }
+
+  /**
    * Updates the locations of uniforms in the shader program.
    */
   updateUniformLocations() {
@@ -1476,7 +1498,14 @@ class MediaShader extends HTMLElement {
       if (location !== null) {
         this.#uniformLocations.set(name, location);
       } else {
-        console.warn(`Uniform '${name}' not found in shader program`);
+        // Only warn about missing uniforms if we're not using the default shader
+        // During initialization, uniforms may not exist in the default shader
+        const isDefaultShader =
+          this.fragmentShader === this.defaultFragmentShader ||
+          !this.getAttribute("fragment-shader");
+        if (!isDefaultShader) {
+          console.warn(`Uniform '${name}' not found in shader program`);
+        }
       }
     }
 
@@ -1533,7 +1562,19 @@ class MediaShader extends HTMLElement {
 
       if (Array.isArray(value)) {
         // Check if this is an array of arrays (uniform array) vs flat array (single vector)
-        const isUniformArray = value.every((item) => Array.isArray(item));
+        let isUniformArray = value.every((item) => Array.isArray(item));
+
+        // Also check shader source to detect uniform arrays like bool[3], int[5], etc.
+        if (!isUniformArray) {
+          const shaderSource =
+            this.fragmentShader || this.getAttribute("fragment-shader") || "";
+          const uniformArrayRegex = new RegExp(
+            `uniform\\s+\\w+\\s+${name}\\s*\\[`,
+            "g"
+          );
+          isUniformArray = uniformArrayRegex.test(shaderSource);
+        }
+
         const flatValue = isUniformArray ? value.flat() : value;
         const len = flatValue.length;
 
@@ -1684,7 +1725,18 @@ class MediaShader extends HTMLElement {
     const setUniform = (name, location, value) => {
       if (Array.isArray(value)) {
         // Check if this is an array of arrays (uniform array) vs flat array (single vector)
-        const isUniformArray = value.every((item) => Array.isArray(item));
+        let isUniformArray = value.every((item) => Array.isArray(item));
+
+        // Also check shader source to detect uniform arrays like bool[3], int[5], etc.
+        if (!isUniformArray) {
+          const shaderSource = this.#fragmentShaders[passIndex] || "";
+          const uniformArrayRegex = new RegExp(
+            `uniform\\s+\\w+\\s+${name}\\s*\\[`,
+            "g"
+          );
+          isUniformArray = uniformArrayRegex.test(shaderSource);
+        }
+
         const flatValue = isUniformArray ? value.flat() : value;
         const len = flatValue.length;
 
