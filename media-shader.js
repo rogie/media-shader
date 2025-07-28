@@ -939,6 +939,10 @@ class MediaShader extends HTMLElement {
   initWebGL() {
     if (!this.gl) return;
 
+    // Flip texture Y coordinate to match OpenGL coordinate system
+    // This makes both v_tex_coord and manual gl_FragCoord calculations consistent
+    this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
+
     // Create shader program
     const vertShader = this.createShader(
       this.gl.VERTEX_SHADER,
@@ -986,7 +990,7 @@ class MediaShader extends HTMLElement {
 
     // Set up vertex buffer
     const positions = new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]);
-    const texCoords = new Float32Array([0, 1, 1, 1, 0, 0, 1, 0]);
+    const texCoords = new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]); // Changed from [0, 1, 1, 1, 0, 0, 1, 0]
 
     // Create and bind position buffer
     const positionBuffer = this.gl.createBuffer();
