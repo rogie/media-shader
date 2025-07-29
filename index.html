@@ -58,18 +58,19 @@
                 <h3>Plasma Wave</h3>
                 <media-shader width="100%"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es 
                     precision highp float;
-                    uniform float uTime;
-                    uniform vec4 uMouse;
-                    varying vec2 vTexCoord;
+out vec4 glFragColor;
+                    uniform float u_time;
+                    uniform vec4 u_mouse;
+                    in vec2 v_tex_coord;
 
                     void main() {
-                        vec2 uv = vTexCoord * 2.0 - 1.0;
-                        float t = uTime;
+                        vec2 uv = v_tex_coord * 2.0 - 1.0;
+                        float t = u_time;
                         
                         // Create a distortion based on mouse position
-                        vec2 mousePos = uMouse.xy * 2.0 - 1.0;
+                        vec2 mousePos = u_mouse.xy * 2.0 - 1.0;
                         float mouseDist = length(uv - mousePos);
                         float mouseInfluence = 0.5 / (mouseDist + 0.5);
                         
@@ -84,7 +85,7 @@
                             sin(plasma + t + 4.189) * 0.5 + 0.5
                         );
                         
-                        gl_FragColor = vec4(color * (1.0 + mouseInfluence * 0.5), 1.0);
+                        glFragColor = vec4(color * (1.0 + mouseInfluence * 0.5), 1.0);
                     }">
                 </media-shader>
             </div>
@@ -93,18 +94,19 @@
                 <h3>Fractal Spiral</h3>
                 <media-shader width="300"
                               height="200"
-                              fragment-shader="
-                    precision highp float;
-                    uniform float uTime;
-                    uniform vec4 uMouse;
-                    varying vec2 vTexCoord;
+                              fragment-shader="#version 300 es 
+                              precision highp float;
+out vec4 glFragColor;
+                    uniform float u_time;
+                    uniform vec4 u_mouse;
+                    in vec2 v_tex_coord;
 
                     void main() {
-                        vec2 uv = vTexCoord * 2.0 - 1.0;
-                        float t = uTime * 0.5;
+                        vec2 uv = v_tex_coord * 2.0 - 1.0;
+                        float t = u_time * 0.5;
                         
                         // Create mouse-based distortion
-                        vec2 mousePos = uMouse.xy * 2.0 - 1.0;
+                        vec2 mousePos = u_mouse.xy * 2.0 - 1.0;
                         float mouseDist = length(uv - mousePos);
                         float mouseAngle = atan(uv.y - mousePos.y, uv.x - mousePos.x);
                         
@@ -120,7 +122,7 @@
                             sin(spiral + 2.094) * 0.5 + 0.5
                         );
                         
-                        gl_FragColor = vec4(color, 1.0);
+                        glFragColor = vec4(color, 1.0);
                     }">
                 </media-shader>
             </div>
@@ -129,16 +131,17 @@
                 <h3>Mandelbrot Zoom</h3>
                 <media-shader width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
-                    uniform float uTime;
-                    uniform vec4 uMouse;
-                    varying vec2 vTexCoord;
+out vec4 glFragColor;
+                    uniform float u_time;
+                    uniform vec4 u_mouse;
+                    in vec2 v_tex_coord;
 
                     void main() {
-                        vec2 uv = vTexCoord * 4.0 - 2.0;
-                        vec2 mousePos = uMouse.xy * 4.0 - 2.0;
-                        float zoom = pow(2.0, uTime);
+                        vec2 uv = v_tex_coord * 4.0 - 2.0;
+                        vec2 mousePos = u_mouse.xy * 4.0 - 2.0;
+                        float zoom = pow(2.0, u_time);
                         
                         // Use mouse position to pan around the fractal
                         vec2 center = vec2(-0.743643887037158704752191506114774, 0.131825904205311970493132056385139);
@@ -159,12 +162,12 @@
                         
                         float t = iter / MAX_ITER;
                         vec3 color = vec3(
-                            sin(t * 20.0 + uTime * 2.0) * 0.5 + 0.5,
-                            sin(t * 15.0 + uTime * 2.0 + 2.094) * 0.5 + 0.5,
-                            sin(t * 10.0 + uTime * 2.0 + 4.189) * 0.5 + 0.5
+                            sin(t * 20.0 + u_time * 2.0) * 0.5 + 0.5,
+                            sin(t * 15.0 + u_time * 2.0 + 2.094) * 0.5 + 0.5,
+                            sin(t * 10.0 + u_time * 2.0 + 4.189) * 0.5 + 0.5
                         );
                         
-                        gl_FragColor = vec4(color, 1.0);
+                        glFragColor = vec4(color, 1.0);
                     }">
                 </media-shader>
             </div>
@@ -173,16 +176,17 @@
                 <h3>Neon Rings</h3>
                 <media-shader width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
-                    uniform float uTime;
-                    uniform vec4 uMouse;
-                    varying vec2 vTexCoord;
+out vec4 glFragColor;
+                    uniform float u_time;
+                    uniform vec4 u_mouse;
+                    in vec2 v_tex_coord;
 
                     void main() {
-                        vec2 uv = vTexCoord * 2.0 - 1.0;
-                        vec2 mousePos = uMouse.xy * 2.0 - 1.0;
-                        float t = uTime;
+                        vec2 uv = v_tex_coord * 2.0 - 1.0;
+                        vec2 mousePos = u_mouse.xy * 2.0 - 1.0;
+                        float t = u_time;
                         
                         // Create mouse-based distortion
                         float mouseDist = length(uv - mousePos);
@@ -201,7 +205,7 @@
                             rings * sin(t + 4.189) * 0.5 + 0.5
                         );
                         
-                        gl_FragColor = vec4(color * (rings + mouseInfluence * 0.5), 1.0);
+                        glFragColor = vec4(color * (rings + mouseInfluence * 0.5), 1.0);
                     }">
                 </media-shader>
             </div>
@@ -210,16 +214,17 @@
                 <h3>Kaleidoscope Flow</h3>
                 <media-shader width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
-                    uniform float uTime;
-                    uniform vec4 uMouse;
-                    varying vec2 vTexCoord;
+out vec4 glFragColor;
+                    uniform float u_time;
+                    uniform vec4 u_mouse;
+                    in vec2 v_tex_coord;
 
                     void main() {
-                        vec2 uv = vTexCoord * 2.0 - 1.0;
-                        vec2 mousePos = uMouse.xy * 2.0 - 1.0;
-                        float t = uTime;
+                        vec2 uv = v_tex_coord * 2.0 - 1.0;
+                        vec2 mousePos = u_mouse.xy * 2.0 - 1.0;
+                        float t = u_time;
                         
                         // Create mouse-influenced kaleidoscope
                         float mouseDist = length(uv - mousePos);
@@ -241,7 +246,7 @@
                             sin(pattern + t + 4.189) * 0.5 + 0.5
                         );
                         
-                        gl_FragColor = vec4(color, 1.0);
+                        glFragColor = vec4(color, 1.0);
                     }">
                 </media-shader>
             </div>
@@ -250,16 +255,17 @@
                 <h3>Hypnotic Vortex</h3>
                 <media-shader width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
-                    uniform float uTime;
-                    uniform vec4 uMouse;
-                    varying vec2 vTexCoord;
+out vec4 glFragColor;
+                    uniform float u_time;
+                    uniform vec4 u_mouse;
+                    in vec2 v_tex_coord;
 
                     void main() {
-                        vec2 uv = vTexCoord * 2.0 - 1.0;
-                        vec2 mousePos = uMouse.xy * 2.0 - 1.0;
-                        float t = uTime;
+                        vec2 uv = v_tex_coord * 2.0 - 1.0;
+                        vec2 mousePos = u_mouse.xy * 2.0 - 1.0;
+                        float t = u_time;
                         
                         // Create mouse-influenced vortex
                         float mouseDist = length(uv - mousePos);
@@ -279,7 +285,7 @@
                             smoothstep(0.1, 0.9, vortex)
                         );
                         
-                        gl_FragColor = vec4(color * (1.0 + mouseDist * 0.5), 1.0);
+                        glFragColor = vec4(color * (1.0 + mouseDist * 0.5), 1.0);
                     }">
                 </media-shader>
             </div>
@@ -359,23 +365,24 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     
                     float random(vec2 st) {
                         return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
                     }
                     
                     void main() {
-                        vec2 uv = vTexCoord;
+                        vec2 uv = v_tex_coord;
                         float glitchAmount = 0.05;
                         float glitchTime = floor(random(vec2(0.0, uv.y)) * 100.0);
                         float glitchOffset = (random(vec2(glitchTime)) * 2.0 - 1.0) * glitchAmount;
                         vec2 glitchUV = vec2(uv.x + glitchOffset, uv.y);
-                        vec4 color = texture2D(uTexture, glitchUV);
-                        gl_FragColor = color;
+                        vec4 color = texture(uTexture, glitchUV);
+                        glFragColor = color;
                     }">
                 </media-shader>
             </div>
@@ -385,18 +392,19 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
                         float amount = 0.005;
                         vec4 col;
-                        col.r = texture2D(uTexture, vec2(vTexCoord.x + amount, vTexCoord.y)).r;
-                        col.g = texture2D(uTexture, vTexCoord).g;
-                        col.b = texture2D(uTexture, vec2(vTexCoord.x - amount, vTexCoord.y)).b;
+                        col.r = texture(uTexture, vec2(v_tex_coord.x + amount, v_tex_coord.y)).r;
+                        col.g = texture(uTexture, v_tex_coord).g;
+                        col.b = texture(uTexture, vec2(v_tex_coord.x - amount, v_tex_coord.y)).b;
                         col.a = 1.0;
-                        gl_FragColor = col;
+                        glFragColor = col;
                     }">
                 </media-shader>
             </div>
@@ -406,19 +414,20 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
                         float frequency = 100.0;
-                        vec2 coord = vTexCoord * frequency;
+                        vec2 coord = v_tex_coord * frequency;
                         vec2 nearest = 2.0 * fract(coord) - 1.0;
                         float dist = length(nearest);
-                        vec4 color = texture2D(uTexture, vTexCoord);
+                        vec4 color = texture(uTexture, v_tex_coord);
                         float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
                         float circle = smoothstep(gray, gray + 0.1, dist);
-                        gl_FragColor = vec4(vec3(circle), 1.0);
+                        glFragColor = vec4(vec3(circle), 1.0);
                     }">
                 </media-shader>
             </div>
@@ -428,15 +437,16 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
-                        vec4 color = texture2D(uTexture, vTexCoord);
+                        vec4 color = texture(uTexture, v_tex_coord);
                         float brightness = dot(color.rgb, vec3(0.299, 0.587, 0.114));
                         vec3 neon = vec3(0.0, 1.0, 1.0) * pow(brightness, 2.0);
-                        gl_FragColor = vec4(color.rgb + neon, 1.0);
+                        glFragColor = vec4(color.rgb + neon, 1.0);
                     }">
                 </media-shader>
             </div>
@@ -446,10 +456,11 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
                         float radius = 2.0;
                         float intensity = 8.0;
@@ -457,13 +468,13 @@
                         vec4 color = vec4(0.0);
                         for(float x = -radius; x <= radius; x++) {
                             for(float y = -radius; y <= radius; y++) {
-                                vec2 coord = vTexCoord + vec2(x, y) * pixel;
-                                vec4 sample = texture2D(uTexture, coord);
+                                vec2 coord = v_tex_coord + vec2(x, y) * pixel;
+                                vec4 sample = texture(uTexture, coord);
                                 color += sample * floor(sample * intensity) / intensity;
                             }
                         }
                         color /= pow(radius * 2.0 + 1.0, 2.0);
-                        gl_FragColor = color;
+                        glFragColor = color;
                     }">
                 </media-shader>
             </div>
@@ -473,14 +484,15 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
-                        float pixels = 50.0 + 30.0 * sin(vTexCoord.y * 10.0);
-                        vec2 coord = floor(vTexCoord * pixels) / pixels;
-                        gl_FragColor = texture2D(uTexture, coord);
+                        float pixels = 50.0 + 30.0 * sin(v_tex_coord.y * 10.0);
+                        vec2 coord = floor(v_tex_coord * pixels) / pixels;
+                        glFragColor = texture(uTexture, coord);
                     }">
                 </media-shader>
             </div>
@@ -490,21 +502,22 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
                         vec2 center = vec2(0.5);
-                        float dist = distance(vTexCoord, center);
-                        vec2 coord = vTexCoord + normalize(vTexCoord - center) * sin(dist * 20.0) * 0.03;
-                        vec4 color = texture2D(uTexture, coord);
+                        float dist = distance(v_tex_coord, center);
+                        vec2 coord = v_tex_coord + normalize(v_tex_coord - center) * sin(dist * 20.0) * 0.03;
+                        vec4 color = texture(uTexture, coord);
                         vec3 rainbow = vec3(
                             sin(dist * 20.0) * 0.5 + 0.5,
                             sin(dist * 20.0 + 2.094) * 0.5 + 0.5,
                             sin(dist * 20.0 + 4.189) * 0.5 + 0.5
                         );
-                        gl_FragColor = vec4(mix(color.rgb, rainbow, 0.3), 1.0);
+                        glFragColor = vec4(mix(color.rgb, rainbow, 0.3), 1.0);
                     }">
                 </media-shader>
             </div>
@@ -514,21 +527,22 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     
                     float random(vec2 st) {
                         return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
                     }
                     
                     void main() {
-                        vec4 color = texture2D(uTexture, vTexCoord);
+                        vec4 color = texture(uTexture, v_tex_coord);
                         float brightness = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-                        float rain = step(0.98, random(vec2(floor(vTexCoord.x * 50.0), floor(vTexCoord.y * 50.0))));
+                        float rain = step(0.98, random(vec2(floor(v_tex_coord.x * 50.0), floor(v_tex_coord.y * 50.0))));
                         vec3 matrix = vec3(0.0, brightness * rain, 0.0);
-                        gl_FragColor = vec4(mix(color.rgb, matrix, 0.5), 1.0);
+                        glFragColor = vec4(mix(color.rgb, matrix, 0.5), 1.0);
                     }">
                 </media-shader>
             </div>
@@ -538,14 +552,15 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
-                        vec4 color = texture2D(uTexture, vTexCoord);
+                        vec4 color = texture(uTexture, v_tex_coord);
                         float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-                        gl_FragColor = vec4(vec3(gray), color.a);
+                        glFragColor = vec4(vec3(gray), color.a);
                     }">
                 </media-shader>
             </div>
@@ -555,18 +570,19 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
-                        vec4 color = texture2D(uTexture, vTexCoord);
+                        vec4 color = texture(uTexture, v_tex_coord);
                         vec3 sepia = vec3(
                             dot(color.rgb, vec3(0.393, 0.769, 0.189)),
                             dot(color.rgb, vec3(0.349, 0.686, 0.168)),
                             dot(color.rgb, vec3(0.272, 0.534, 0.131))
                         );
-                        gl_FragColor = vec4(sepia, color.a);
+                        glFragColor = vec4(sepia, color.a);
                     }">
                 </media-shader>
             </div>
@@ -576,13 +592,14 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
-                        vec4 color = texture2D(uTexture, vTexCoord);
-                        gl_FragColor = vec4(1.0 - color.rgb, color.a);
+                        vec4 color = texture(uTexture, v_tex_coord);
+                        glFragColor = vec4(1.0 - color.rgb, color.a);
                     }">
                 </media-shader>
             </div>
@@ -592,16 +609,17 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
-                        vec4 color = texture2D(uTexture, vTexCoord);
+                        vec4 color = texture(uTexture, v_tex_coord);
                         vec2 center = vec2(0.5, 0.5);
-                        float dist = distance(vTexCoord, center);
+                        float dist = distance(v_tex_coord, center);
                         float vignette = 1.0 - dist * 1.5;
-                        gl_FragColor = vec4(color.rgb * vignette, color.a);
+                        glFragColor = vec4(color.rgb * vignette, color.a);
                     }">
                 </media-shader>
             </div>
@@ -611,14 +629,15 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
                         float pixels = 50.0;
-                        vec2 coord = floor(vTexCoord * pixels) / pixels;
-                        gl_FragColor = texture2D(uTexture, coord);
+                        vec2 coord = floor(v_tex_coord * pixels) / pixels;
+                        glFragColor = texture(uTexture, coord);
                     }">
                 </media-shader>
             </div>
@@ -628,17 +647,18 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
                         vec2 texel = vec2(1.0/512.0);
-                        vec4 c = texture2D(uTexture, vTexCoord);
-                        vec4 n = texture2D(uTexture, vTexCoord + vec2(0.0, texel.y));
-                        vec4 e = texture2D(uTexture, vTexCoord + vec2(texel.x, 0.0));
+                        vec4 c = texture(uTexture, v_tex_coord);
+                        vec4 n = texture(uTexture, v_tex_coord + vec2(0.0, texel.y));
+                        vec4 e = texture(uTexture, v_tex_coord + vec2(texel.x, 0.0));
                         vec4 edge = abs(c - n) + abs(c - e);
-                        gl_FragColor = vec4(edge.rgb, 1.0);
+                        glFragColor = vec4(edge.rgb, 1.0);
                     }">
                 </media-shader>
             </div>
@@ -648,16 +668,17 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
                         float offset = 0.005;
-                        vec4 r = texture2D(uTexture, vTexCoord + vec2(offset, 0.0));
-                        vec4 g = texture2D(uTexture, vTexCoord);
-                        vec4 b = texture2D(uTexture, vTexCoord - vec2(offset, 0.0));
-                        gl_FragColor = vec4(r.r, g.g, b.b, 1.0);
+                        vec4 r = texture(uTexture, v_tex_coord + vec2(offset, 0.0));
+                        vec4 g = texture(uTexture, v_tex_coord);
+                        vec4 b = texture(uTexture, v_tex_coord - vec2(offset, 0.0));
+                        glFragColor = vec4(r.r, g.g, b.b, 1.0);
                     }">
                 </media-shader>
             </div>
@@ -667,17 +688,18 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
-                        vec4 color = texture2D(uTexture, vTexCoord);
+                        vec4 color = texture(uTexture, v_tex_coord);
                         float angle = 2.0;
                         vec3 k = vec3(0.57735);
                         float c = cos(angle);
                         vec3 rotated = vec3(color.rgb * c + cross(k, color.rgb) * sin(angle) + k * dot(k, color.rgb) * (1.0 - c));
-                        gl_FragColor = vec4(rotated, color.a);
+                        glFragColor = vec4(rotated, color.a);
                     }">
                 </media-shader>
             </div>
@@ -687,14 +709,15 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
-                        vec4 color = texture2D(uTexture, vTexCoord);
+                        vec4 color = texture(uTexture, v_tex_coord);
                         float levels = 5.0;
-                        gl_FragColor = vec4(floor(color.rgb * levels) / levels, color.a);
+                        glFragColor = vec4(floor(color.rgb * levels) / levels, color.a);
                     }">
                 </media-shader>
             </div>
@@ -704,14 +727,15 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
-                        vec4 color = texture2D(uTexture, vTexCoord);
-                        float scanline = sin(vTexCoord.y * 400.0) * 0.1;
-                        gl_FragColor = vec4(color.rgb - scanline, color.a);
+                        vec4 color = texture(uTexture, v_tex_coord);
+                        float scanline = sin(v_tex_coord.y * 400.0) * 0.1;
+                        glFragColor = vec4(color.rgb - scanline, color.a);
                     }">
                 </media-shader>
             </div>
@@ -721,17 +745,18 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
-                        vec2 coord = vTexCoord - 0.5;
+                        vec2 coord = v_tex_coord - 0.5;
                         float angle = atan(coord.y, coord.x);
                         float radius = length(coord);
                         angle = mod(angle, 3.14159 / 4.0) - 3.14159 / 8.0;
                         coord = radius * vec2(cos(angle), sin(angle)) + 0.5;
-                        gl_FragColor = texture2D(uTexture, coord);
+                        glFragColor = texture(uTexture, coord);
                     }">
                 </media-shader>
             </div>
@@ -741,16 +766,17 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
                         vec2 center = vec2(0.5, 0.5);
-                        vec2 coord = vTexCoord;
+                        vec2 coord = v_tex_coord;
                         float dist = distance(coord, center);
                         coord += (coord - center) * sin(dist * 50.0) * 0.05;
-                        gl_FragColor = texture2D(uTexture, coord);
+                        glFragColor = texture(uTexture, coord);
                     }">
                 </media-shader>
             </div>
@@ -760,17 +786,18 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
                         vec2 center = vec2(0.5, 0.5);
-                        vec2 coord = vTexCoord - center;
+                        vec2 coord = v_tex_coord - center;
                         float dist = length(coord);
                         float angle = atan(coord.y, coord.x) + dist * 10.0;
                         coord = vec2(cos(angle), sin(angle)) * dist + center;
-                        gl_FragColor = texture2D(uTexture, coord);
+                        glFragColor = texture(uTexture, coord);
                     }">
                 </media-shader>
             </div>
@@ -780,16 +807,17 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
                         vec2 texel = vec2(1.0/512.0);
-                        vec4 color = texture2D(uTexture, vTexCoord);
-                        vec4 colorL = texture2D(uTexture, vTexCoord - texel);
+                        vec4 color = texture(uTexture, v_tex_coord);
+                        vec4 colorL = texture(uTexture, v_tex_coord - texel);
                         vec4 emboss = (color - colorL) + 0.5;
-                        gl_FragColor = vec4(emboss.rgb, 1.0);
+                        glFragColor = vec4(emboss.rgb, 1.0);
                     }">
                 </media-shader>
             </div>
@@ -799,15 +827,16 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
                         float size = 0.03;
-                        vec2 coord = size * floor(vTexCoord / size);
-                        vec4 color = texture2D(uTexture, coord);
-                        gl_FragColor = color;
+                        vec2 coord = size * floor(v_tex_coord / size);
+                        vec4 color = texture(uTexture, coord);
+                        glFragColor = color;
                     }">
                 </media-shader>
             </div>
@@ -817,15 +846,16 @@
                 <media-shader src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                               width="300"
                               height="200"
-                              fragment-shader="
+                              fragment-shader="#version 300 es
                     precision highp float;
+out vec4 glFragColor;
                     uniform sampler2D uTexture;
-                    varying vec2 vTexCoord;
+                    in vec2 v_tex_coord;
                     void main() {
-                        vec4 color = texture2D(uTexture, vTexCoord);
+                        vec4 color = texture(uTexture, v_tex_coord);
                         float levels = 4.0;
                         color.rgb = floor(color.rgb * levels + 0.5) / levels;
-                        gl_FragColor = color;
+                        glFragColor = color;
                     }">
                 </media-shader>
             </div>
@@ -905,15 +935,16 @@
                       src="https://images.pexels.com/photos/1169754/pexels-photo-1169754.jpeg?auto=compress&cs=tinysrgb&w=800"
                       fragment-shader="
                 precision highp float;
+out vec4 glFragColor;
                 uniform sampler2D uTexture;
                 uniform vec3 uTintColor;
                 uniform float uMixRatio;
-                varying vec2 vTexCoord;
+                in vec2 v_tex_coord;
 
                 void main() {
-                    vec4 texColor = texture2D(uTexture, vTexCoord);
+                    vec4 texColor = texture(uTexture, v_tex_coord);
                     vec3 tinted = texColor.rgb * uTintColor;
-                    gl_FragColor = vec4(mix(texColor.rgb, tinted, uMixRatio), texColor.a);
+                    glFragColor = vec4(mix(texColor.rgb, tinted, uMixRatio), texColor.a);
                 }">
         </media-shader>
 
@@ -1005,16 +1036,17 @@
         <media-shader id="uniformVideoDemo"
                       src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
                       style="max-width: 100%; margin-bottom: 20px;"
-                      fragment-shader="
+                      fragment-shader="#version 300 es
             precision highp float;
+out vec4 glFragColor;
             uniform sampler2D uTexture;
-            uniform float uTime;
+            uniform float u_time;
             uniform float uIntensity;
             uniform float uColorShift;
             uniform float uDistortion;
             uniform float uTimeSpeed;
             uniform int uEffectType;
-            varying vec2 vTexCoord;
+            in vec2 v_tex_coord;
 
             vec2 ripple(vec2 uv, float intensity, float time) {
                 vec2 center = vec2(0.5);
@@ -1049,8 +1081,8 @@
             }
 
             void main() {
-                vec2 uv = vTexCoord;
-                float time = uTime * uTimeSpeed;
+                vec2 uv = v_tex_coord;
+                float time = u_time * uTimeSpeed;
                 
                 // Apply different effects based on type
                 if (uEffectType == 0) { // Ripple
@@ -1062,7 +1094,7 @@
                 }
                 
                 // Sample the texture with modified UV
-                vec4 color = texture2D(uTexture, uv);
+                vec4 color = texture(uTexture, uv);
                 
                 // Apply color effects
                 if (uEffectType == 3) { // Colorize
@@ -1070,9 +1102,9 @@
                 }
                 
                 // Apply intensity
-                color.rgb = mix(texture2D(uTexture, vTexCoord).rgb, color.rgb, uIntensity);
+                color.rgb = mix(texture(uTexture, v_tex_coord).rgb, color.rgb, uIntensity);
                 
-                gl_FragColor = color;
+                glFragColor = color;
             }">
         </media-shader>
         <pre id="currentVideoUniforms">
@@ -1083,58 +1115,63 @@
     <script src="./media-shader.js"></script>
     <script>
         const shaders = {
-            normal: `
+            normal: `#version 300 es
             precision highp float;
+out vec4 glFragColor;
             uniform sampler2D uTexture;
             uniform vec2 uResolution;
-            varying vec2 vTexCoord;
+            in vec2 v_tex_coord;
 
             void main() {
-                gl_FragColor = texture2D(uTexture, vTexCoord);
+                glFragColor = texture(uTexture, v_tex_coord);
             }
         `,
-            grayscale: `
+            grayscale: `#version 300 es
             precision highp float;
+out vec4 glFragColor;
             uniform sampler2D uTexture;
             uniform vec2 uResolution;
-            varying vec2 vTexCoord;
+            in vec2 v_tex_coord;
 
             void main() {
-                vec4 color = texture2D(uTexture, vTexCoord);
+                vec4 color = texture(uTexture, v_tex_coord);
                 float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
-                gl_FragColor = vec4(vec3(gray), 1.0);
+                glFragColor = vec4(vec3(gray), 1.0);
             }
         `,
-            invert: `
+            invert: `#version 300 es
             precision highp float;
+out vec4 glFragColor;
             uniform sampler2D uTexture;
             uniform vec2 uResolution;
-            varying vec2 vTexCoord;
+            in vec2 v_tex_coord;
 
             void main() {
-                vec4 color = texture2D(uTexture, vTexCoord);
-                gl_FragColor = vec4(1.0 - color.rgb, color.a);
+                vec4 color = texture(uTexture, v_tex_coord);
+                glFragColor = vec4(1.0 - color.rgb, color.a);
             }
         `,
-            sepia: `
+            sepia: `#version 300 es
             precision highp float;
+out vec4 glFragColor;
             uniform sampler2D uTexture;
             uniform vec2 uResolution;
-            varying vec2 vTexCoord;
+            in vec2 v_tex_coord;
 
             void main() {
-                vec4 color = texture2D(uTexture, vTexCoord);
+                vec4 color = texture(uTexture, v_tex_coord);
                 float r = dot(color.rgb, vec3(0.393, 0.769, 0.189));
                 float g = dot(color.rgb, vec3(0.349, 0.686, 0.168));
                 float b = dot(color.rgb, vec3(0.272, 0.534, 0.131));
-                gl_FragColor = vec4(r, g, b, color.a);
+                glFragColor = vec4(r, g, b, color.a);
             }
         `,
-            blur: `
+            blur: `#version 300 es
             precision highp float;
+out vec4 glFragColor;
             uniform sampler2D uTexture;
             uniform vec2 uResolution;
-            varying vec2 vTexCoord;
+            in vec2 v_tex_coord;
 
             void main() {
                 vec2 texelSize = 1.0 / uResolution;
@@ -1156,11 +1193,11 @@
                 offsets[8] = vec2(texelSize.x, texelSize.y);
 
                 for(int i = 0; i < 9; i++) {
-                    vec4 tmp = texture2D(uTexture, vTexCoord + offsets[i]);
+                    vec4 tmp = texture(uTexture, v_tex_coord + offsets[i]);
                     color += tmp * kernel[i];
                 }
 
-                gl_FragColor = color;
+                glFragColor = color;
             }
         `
         };
@@ -1259,82 +1296,87 @@
         });
 
         const videoShaders = {
-            normal: `
+            normal: `#version 300 es
             precision highp float;
+out vec4 glFragColor;
             uniform sampler2D uTexture;
-            varying vec2 vTexCoord;
+            in vec2 v_tex_coord;
 
             void main() {
-                gl_FragColor = texture2D(uTexture, vTexCoord);
+                glFragColor = texture(uTexture, v_tex_coord);
             }
         `,
-            wave: `
+            wave: `#version 300 es
             precision highp float;
+out vec4 glFragColor;
             uniform sampler2D uTexture;
             uniform vec2 uResolution;
-            uniform float uTime;
-            varying vec2 vTexCoord;
+            uniform float u_time;
+            in vec2 v_tex_coord;
 
             void main() {
-                vec2 uv = vTexCoord;
-                float wave = sin(uv.y * 10.0 + uTime) * 0.02;
+                vec2 uv = v_tex_coord;
+                float wave = sin(uv.y * 10.0 + u_time) * 0.02;
                 vec2 distortedUV = vec2(uv.x + wave, uv.y);
-                gl_FragColor = texture2D(uTexture, distortedUV);
+                glFragColor = texture(uTexture, distortedUV);
             }
         `,
-            pixelate: `
+            pixelate: `#version 300 es
             precision highp float;
+out vec4 glFragColor;
             uniform sampler2D uTexture;
             uniform vec2 uResolution;
-            varying vec2 vTexCoord;
+            in vec2 v_tex_coord;
 
             void main() {
                 float pixels = 100.0;
-                vec2 uv = vTexCoord;
+                vec2 uv = v_tex_coord;
                 vec2 pixelated = floor(uv * pixels) / pixels;
-                gl_FragColor = texture2D(uTexture, pixelated);
+                glFragColor = texture(uTexture, pixelated);
             }
         `,
-            colorCycle: `
+            colorCycle: `#version 300 es
             precision highp float;
+out vec4 glFragColor;
             uniform sampler2D uTexture;
-            uniform float uTime;
-            varying vec2 vTexCoord;
+            uniform float u_time;
+            in vec2 v_tex_coord;
 
             void main() {
-                vec4 texColor = texture2D(uTexture, vTexCoord);
+                vec4 texColor = texture(uTexture, v_tex_coord);
                 vec3 color = texColor.rgb;
                 
                 // Create a cycling color overlay
                 vec3 colorShift = vec3(
-                    sin(uTime) * 0.5 + 0.5,
-                    sin(uTime + 2.094) * 0.5 + 0.5,
-                    sin(uTime + 4.189) * 0.5 + 0.5
+                    sin(u_time) * 0.5 + 0.5,
+                    sin(u_time + 2.094) * 0.5 + 0.5,
+                    sin(u_time + 4.189) * 0.5 + 0.5
                 );
                 
                 // Mix the original color with the cycling color
                 color *= colorShift;
                 
-                gl_FragColor = vec4(color, texColor.a);
+                glFragColor = vec4(color, texColor.a);
             }
         `,
-            edgeDetect: `
+            edgeDetect: `#version 300 es
             precision highp float;
+out vec4 glFragColor;
             uniform sampler2D uTexture;
             uniform vec2 uResolution;
-            varying vec2 vTexCoord;
+            in vec2 v_tex_coord;
 
             void main() {
                 vec2 texel = 1.0 / uResolution;
-                vec4 center = texture2D(uTexture, vTexCoord);
-                vec4 up = texture2D(uTexture, vTexCoord + vec2(0.0, texel.y));
-                vec4 down = texture2D(uTexture, vTexCoord + vec2(0.0, -texel.y));
-                vec4 left = texture2D(uTexture, vTexCoord + vec2(-texel.x, 0.0));
-                vec4 right = texture2D(uTexture, vTexCoord + vec2(texel.x, 0.0));
+                vec4 center = texture(uTexture, v_tex_coord);
+                vec4 up = texture(uTexture, v_tex_coord + vec2(0.0, texel.y));
+                vec4 down = texture(uTexture, v_tex_coord + vec2(0.0, -texel.y));
+                vec4 left = texture(uTexture, v_tex_coord + vec2(-texel.x, 0.0));
+                vec4 right = texture(uTexture, v_tex_coord + vec2(texel.x, 0.0));
                 
                 vec4 edges = abs(center - up) + abs(center - down) + 
                             abs(center - left) + abs(center - right);
-                gl_FragColor = vec4(edges.rgb, 1.0);
+                glFragColor = vec4(edges.rgb, 1.0);
             }
         `
         };

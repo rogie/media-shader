@@ -7,10 +7,13 @@
  *
  * @property {string} src - URL of the image or video to display
  * @property {string|string[]} fragmentShader - GLSL fragment shader code (string for single-pass, array for multi-pass)
+ * @property {string} vertexShader - GLSL vertex shader code (for multi-pass, uses same vertex shader for all passes)
  * @property {string} width - Width of the canvas in pixels
  * @property {string} height - Height of the canvas in pixels
  * @property {string|string[]} uniforms - Uniform values (object for single-pass, array of objects for multi-pass)
  * @property {boolean} playing - Controls video playback when the media is a video
+ * @property {boolean} muted - Controls video mute state when the media is a video
+ * @property {number} volume - Controls video volume from 0 to 1 when the media is a video
  * @property {string} alt - Alternative text for accessibility
  * @property {string} loading - Loading mode ('eager' or 'lazy')
  */
@@ -114,7 +117,7 @@ class MediaShader extends HTMLElement {
             }
         `;
 
-    this.vertexShader = `#version 300 es
+    this.defaultVertexShader = `#version 300 es
             precision highp float;
             in vec4 a_position;
             in vec2 a_tex_coord;
@@ -164,6 +167,22 @@ class MediaShader extends HTMLElement {
       );
     } else {
       this.removeAttribute("fragment-shader");
+    }
+  }
+
+  /**
+   * Gets the vertex shader code.
+   * @returns {string|null} The vertex shader code or null if not set
+   */
+  get vertexShader() {
+    return this.getAttribute("vertex-shader");
+  }
+
+  set vertexShader(value) {
+    if (value) {
+      this.setAttribute("vertex-shader", value);
+    } else {
+      this.removeAttribute("vertex-shader");
     }
   }
 
@@ -242,6 +261,23 @@ class MediaShader extends HTMLElement {
   }
 
   /**
+   * Gets the muted state for video elements.
+   * @returns {boolean} True if the video should be muted
+   */
+  get muted() {
+    return this.getAttribute("muted") !== "false";
+  }
+
+  set muted(value) {
+    const shouldMute = value !== false && value !== "false";
+    if (shouldMute) {
+      this.setAttribute("muted", "");
+    } else {
+      this.setAttribute("muted", "false");
+    }
+  }
+
+  /**
    * Gets the alternative text for accessibility.
    * @returns {string|null} The alternative text or null if not set
    */
@@ -254,6 +290,26 @@ class MediaShader extends HTMLElement {
       this.setAttribute("alt", value);
     } else {
       this.removeAttribute("alt");
+    }
+  }
+
+  /**
+   * Gets the volume level for video elements.
+   * @returns {number} The volume level from 0 to 1, defaults to 1
+   */
+  get volume() {
+    const value = this.getAttribute("volume");
+    if (value === null) return 1;
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? 1 : Math.max(0, Math.min(1, parsed));
+  }
+
+  set volume(value) {
+    if (value !== null && value !== undefined) {
+      const clamped = Math.max(0, Math.min(1, parseFloat(value) || 0));
+      this.setAttribute("volume", clamped.toString());
+    } else {
+      this.removeAttribute("volume");
     }
   }
 
@@ -505,6 +561,7 @@ class MediaShader extends HTMLElement {
       "playsinline",
       "loop",
       "autoplay",
+      "volume",
     ];
   }
 
@@ -523,6 +580,11 @@ class MediaShader extends HTMLElement {
         break;
       case "fragment-shader":
         this.updateShader(newValue || this.defaultFragmentShader);
+        break;
+      case "vertex-shader":
+        this.updateShader(
+          this.getAttribute("fragment-shader") || this.defaultFragmentShader
+        );
         break;
       case "width":
         this.#width = newValue;
@@ -581,6 +643,14 @@ class MediaShader extends HTMLElement {
       case "autoplay":
         if (this.mediaElement?.tagName === "VIDEO") {
           this.mediaElement.autoplay = newValue !== "false";
+        }
+        break;
+      case "volume":
+        if (this.mediaElement?.tagName === "VIDEO") {
+          const volumeValue = newValue ? parseFloat(newValue) : 1;
+          this.mediaElement.volume = isNaN(volumeValue)
+            ? 1
+            : Math.max(0, Math.min(1, volumeValue));
         }
         break;
     }
@@ -724,6 +794,15 @@ class MediaShader extends HTMLElement {
             this.getAttribute("playsinline") !== "false";
           this.mediaElement.loop = this.getAttribute("loop") !== "false";
           this.mediaElement.autoplay = this.getAttribute("autoplay") === "true";
+
+          // Set volume from attribute
+          const volumeAttr = this.getAttribute("volume");
+          if (volumeAttr !== null) {
+            const volumeValue = parseFloat(volumeAttr);
+            this.mediaElement.volume = isNaN(volumeValue)
+              ? 1
+              : Math.max(0, Math.min(1, volumeValue));
+          }
 
           // Wait for metadata to load before proceeding
           this.mediaElement.addEventListener(
@@ -943,10 +1022,14 @@ class MediaShader extends HTMLElement {
     // This makes both v_tex_coord and manual gl_FragCoord calculations consistent
     this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
 
+    // Get custom vertex shader or use default
+    const customVertexShader = this.getAttribute("vertex-shader");
+    const vertexShaderSource = customVertexShader || this.defaultVertexShader;
+
     // Create shader program
     const vertShader = this.createShader(
       this.gl.VERTEX_SHADER,
-      this.vertexShader
+      vertexShaderSource
     );
     const fragShader = this.createShader(
       this.gl.FRAGMENT_SHADER,
@@ -1241,10 +1324,14 @@ class MediaShader extends HTMLElement {
     this.programs = [];
     this.#passUniformLocations = [];
 
+    // Get custom vertex shader or use default
+    const customVertexShader = this.getAttribute("vertex-shader");
+    const vertexShaderSource = customVertexShader || this.defaultVertexShader;
+
     // Create new shader program
     const vertShader = this.createShader(
       this.gl.VERTEX_SHADER,
-      this.vertexShader
+      vertexShaderSource
     );
     const fragShader = this.createShader(
       this.gl.FRAGMENT_SHADER,
@@ -1348,11 +1435,15 @@ class MediaShader extends HTMLElement {
 
     if (!this.gl) return;
 
+    // Get custom vertex shader or use default
+    const customVertexShader = this.getAttribute("vertex-shader");
+    const vertexShaderSource = customVertexShader || this.defaultVertexShader;
+
     // Create shader programs for each pass
     for (let i = 0; i < shaders.length; i++) {
       const vertShader = this.createShader(
         this.gl.VERTEX_SHADER,
-        this.vertexShader
+        vertexShaderSource
       );
       const fragShader = this.createShader(this.gl.FRAGMENT_SHADER, shaders[i]);
 

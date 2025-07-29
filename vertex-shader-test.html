@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+    <title>Vertex Shader Test</title>
+    <script src="media-shader.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        media-shader {
+            border: 1px solid #333;
+        }
+
+        .description {
+            max-width: 600px;
+            text-align: center;
+            color: #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Vertex Shader Attribute Test</h1>
+
+        <div class="description">
+            <h3>Test 1: Default Vertex Shader</h3>
+            <p>This uses the default vertex shader with a custom fragment shader that creates a gradient.</p>
+        </div>
+
+        <media-shader width="400px"
+                      height="300px"
+                      fragment-shader='#version 300 es
+                precision highp float;
+                out vec4 fragColor;
+                uniform vec2 u_resolution;
+                uniform float u_time;
+                in vec2 v_tex_coord;
+
+                void main() {
+                    vec2 uv = v_tex_coord;
+                    vec3 color = 0.5 + 0.5 * cos(u_time + uv.xyx + vec3(0,2,4));
+                    fragColor = vec4(color, 1.0);
+                }'>
+        </media-shader>
+
+        <div class="description">
+            <h3>Test 2: Custom Vertex Shader</h3>
+            <p>This uses a custom vertex shader that applies a wavy distortion effect.</p>
+        </div>
+
+        <media-shader width="400px"
+                      height="300px"
+                      vertex-shader='#version 300 es
+                precision highp float;
+                in vec4 a_position;
+                in vec2 a_tex_coord;
+                out vec2 v_tex_coord;
+                uniform float u_time;
+
+                void main() {
+                    vec4 pos = a_position;
+                    pos.x += sin(a_position.y * 10.0 + u_time * 2.0) * 0.1;
+                    gl_Position = pos;
+                    v_tex_coord = a_tex_coord;
+                }'
+                      fragment-shader='#version 300 es
+                precision highp float;
+                out vec4 fragColor;
+                uniform vec2 u_resolution;
+                uniform float u_time;
+                in vec2 v_tex_coord;
+
+                void main() {
+                    vec2 uv = v_tex_coord;
+                    vec3 color = 0.5 + 0.5 * cos(u_time + uv.xyx + vec3(0,2,4));
+                    fragColor = vec4(color, 1.0);
+                }'>
+        </media-shader>
+
+        <div class="description">
+            <h3>Test 3: Multi-pass with Custom Vertex Shader</h3>
+            <p>This uses multi-pass rendering with the same custom vertex shader for both passes.</p>
+        </div>
+
+        <media-shader width="400px"
+                      height="300px"
+                      vertex-shader='#version 300 es
+                precision highp float;
+                in vec4 a_position;
+                in vec2 a_tex_coord;
+                out vec2 v_tex_coord;
+                uniform float u_time;
+
+                void main() {
+                    vec4 pos = a_position;
+                    pos.x += sin(a_position.y * 5.0 + u_time) * 0.05;
+                    gl_Position = pos;
+                    v_tex_coord = a_tex_coord;
+                }'
+                      fragment-shader='[
+                "#version 300 es\nprecision highp float;\nout vec4 fragColor;\nuniform vec2 u_resolution;\nuniform float u_time;\nin vec2 v_tex_coord;\n\nvoid main() {\n    vec2 uv = v_tex_coord;\n    vec3 color = 0.5 + 0.5 * cos(u_time + uv.xyx + vec3(0,2,4));\n    fragColor = vec4(color, 1.0);\n}",
+                "#version 300 es\nprecision highp float;\nout vec4 fragColor;\nuniform sampler2D u_texture;\nin vec2 v_tex_coord;\n\nvoid main() {\n    vec2 uv = v_tex_coord;\n    vec3 color = texture(u_texture, uv).rgb;\n    color = 1.0 - color;\n    fragColor = vec4(color, 1.0);\n}"
+            ]'>
+        </media-shader>
+    </div>
+</body>
+
+</html>
